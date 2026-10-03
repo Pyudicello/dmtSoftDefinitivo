@@ -1,4 +1,4 @@
-# PREVENIA — Modelo de Dominio (v0.1)
+# PREVENIA — Modelo de Dominio (v0.2 — Día 2)
 
 ## 1. Visión General del Dominio
 El dominio de **PREVENIA** modela la operativa de consultoras de Higiene y Seguridad Laboral que administran el cumplimiento normativo de múltiples empresas clientes.
@@ -11,6 +11,7 @@ erDiagram
     ORGANIZATION ||--o{ EXPIRATION : isolates
     ORGANIZATION ||--o{ USER_COMPANY_ASSIGNMENT : defines
 
+    COMPANY ||--o{ USER : client_users
     COMPANY ||--o{ USER_COMPANY_ASSIGNMENT : assigned_to
     USER ||--o{ USER_COMPANY_ASSIGNMENT : works_on
 
@@ -30,9 +31,11 @@ erDiagram
     USER {
         UUID id PK
         UUID organization_id FK
+        UUID company_id FK
         string first_name
         string last_name
         string email UK
+        string password_hash
         string role
         string status
     }
@@ -79,11 +82,11 @@ erDiagram
 
 ---
 
-## 2. Entidades Fundacionales (Implementadas en Día 1)
+## 2. Entidades Fundacionales (Día 2)
 
 ### 2.1 Organization (Consultora de Higiene y Seguridad)
 Representa la entidad raíz del inquilino (Tenant).
-* **Campos clave**:
+* **Campos**:
   * `id` (UUID): Identificador único global.
   * `name` (String, Obligatorio): Nombre comercial o fantasía (ej: "Seguridad Integral Córdoba").
   * `legal_name` (String): Razón social legal.
@@ -91,21 +94,24 @@ Representa la entidad raíz del inquilino (Tenant).
   * `email` (String, Obligatorio): Email corporativo de contacto.
   * `phone` (String): Teléfono de contacto.
   * `status` (Enum: `ACTIVE`, `SUSPENDED`, `INACTIVE`).
+  * `created_at`, `updated_at` (OffsetDateTime UTC).
 
-### 2.2 User (Usuario del Sistema)
+### 2.2 User (Usuario del Sistema e Identidad)
 Identidad y credenciales dentro de PREVENIA.
-* **Campos clave**:
+* **Campos**:
   * `id` (UUID): Identificador único.
-  * `organization_id` (UUID, Opcional para `PLATFORM_ADMIN`, Obligatorio para el resto).
+  * `organization_id` (UUID, Nullable solo para `PLATFORM_ADMIN`, Obligatorio para el resto).
+  * `company_id` (UUID, Nullable, poblado para usuarios de rol `CLIENT` para asociarlos a su empresa).
   * `first_name` & `last_name` (String, Obligatorios).
   * `email` (String, Obligatorio, Único globalmente).
-  * `password_hash` / `external_identity_id` (String): Soporte dual para autenticación local (BCrypt) o federada (Cognito / Auth0).
+  * `password_hash` (String, BCrypt): Almacenamiento seguro unidireccional.
+  * `external_identity_id` (String, Opcional): Para federación OIDC/Cognito futura.
   * `role` (Enum: `PLATFORM_ADMIN`, `CONSULTANT_ADMIN`, `TECHNICIAN`, `CLIENT`).
   * `status` (Enum: `ACTIVE`, `INACTIVE`, `BLOCKED`).
 
 ### 2.3 Company (Empresa Cliente)
 Representa a una empresa atendida por la consultora (ej: "Banco Macro", "Andreani").
-* **Campos clave**:
+* **Campos**:
   * `id` (UUID): Identificador único.
   * `organization_id` (UUID, Obligatorio): Organización dueña del registro.
   * `business_name` (String, Obligatorio): Nombre de fantasía.
@@ -117,71 +123,50 @@ Representa a una empresa atendida por la consultora (ej: "Banco Macro", "Andrean
 
 ### 2.4 UserCompanyAssignment (Asignación Técnico → Empresa)
 Asociación granular que define qué técnicos atienden a qué empresas.
-* **Campos clave**:
+* **Campos**:
   * `id` (UUID): Identificador único.
-  * `organization_id` (UUID, Obligatorio).
-  * `user_id` (UUID, Obligatorio): Técnico asignado.
+  * `organization_id` (UUID, Obligatorio): Tenant para indexación y queries compuestas.
+  * `user_id` (UUID, Obligatorio): Técnico asignado (debe tener rol `TECHNICIAN`).
   * `company_id` (UUID, Obligatorio): Empresa asignada.
   * `assigned_at` (Timestamp UTC).
-  * `active` (Boolean): Bandera de estado activo/inactivo.
-* **Restricción**: Clave única compuesta `(organization_id, user_id, company_id)`.
-
-### 2.5 ExpirationCategory (Categoría de Vencimiento)
-Catálogo tipificado de obligaciones.
-* **Estrategia híbrida**: Categorías estándar del sistema (`organization_id = NULL`) y categorías personalizadas por consultora (`organization_id = UUID`).
-* **Categorías estándar iniciales**:
-  1. `MATAFUEGOS` (Matafuegos y Extintores)
-  2. `CAPACITACION` (Capacitaciones de Personal)
-  3. `ART` (ART y Cobertura)
-  4. `VISITA_TECNICA` (Visitas Técnicas)
-  5. `ASCENSOR` (Ascensores y Montacargas)
-  6. `AUTOELEVADOR` (Autoelevadores y Maquinaria)
-  7. `SEGURO` (Seguros y Pólizas)
-  8. `MEDICION` (Mediciones y Protocolos: PAT, Ruido, Iluminación)
-  9. `DOCUMENTACION` (Habilitaciones y Legal)
-  10. `PLAN_EVACUACION` (Plan de Evacuación y Simulacros)
-  11. `OTRO` (Otras Obligaciones)
-
-### 2.6 Expiration (Vencimiento / Obligación)
-Entidad central y corazón del negocio. Modela de manera genérica y flexible cualquier compromiso sujeto a una fecha límite.
-* **Campos clave**:
-  * `id` (UUID): Identificador único.
-  * `organization_id` (UUID): Tenant.
-  * `company_id` (UUID): Empresa a la que pertenece la obligación.
-  * `category_id` (UUID): Categoría asociada.
-  * `title` (String, Obligatorio): Descripción corta del vencimiento (ej: "Recarga Anual Extintores Nave 1").
-  * `description` (Text): Detalle normativo o alcance.
-  * `issue_date` (Date, Opcional): Fecha de emisión o última renovación.
-  * `expiration_date` (Date, Obligatorio): Fecha límite o de expiración.
-  * `status` (Enum Operativo: `PENDING`, `COMPLETED`, `CANCELLED`).
-  * `responsible_user_id` (UUID, Opcional): Técnico o responsable asignado.
-  * `recurrence_type` (Enum: `NONE`, `MONTHLY`, `QUARTERLY`, `SEMIANNUAL`, `YEARLY`, `CUSTOM`).
-  * `notification_days_before` (Int, Default 30): Días de anticipación para disparar alertas.
-  * `notes` (Text): Observaciones técnicas.
+  * `active` (Boolean): Bandera de estado activo/inactivo (soporta histórico de desasignaciones).
+* **Restricciones de Negocio**:
+  * Solo se pueden asignar usuarios con rol `TECHNICIAN`.
+  * El usuario y la empresa deben pertenecer a la misma `Organization`.
+  * No se permite duplicar una asignación activa.
 
 ---
 
-## 3. Lógica de Estados: Operacional vs. Temporal
+## 3. Matriz de Permisos Detallada (Permissions Matrix)
 
-Para evitar inconsistencias de datos (donde un registro dice "VIGENTE" en la base de datos pero el reloj ya cruzó la medianoche), se separa:
-
-1. **Estado Operativo (Persistido en DB)**:
-   * `PENDING`: La obligación está abierta y pendiente de resolución/renovación.
-   * `COMPLETED`: La obligación fue cumplida/renovada.
-   * `CANCELLED`: La obligación fue anulada o dada de baja.
-
-2. **Estado Temporal (Calculado en Capa de Aplicación / DTO)**:
-   * Si `status == PENDING`:
-     * `EXPIRED` (Vencido): `expirationDate < today`.
-     * `URGENT` (Urgente): `expirationDate <= today + 7 days`.
-     * `UPCOMING` (Próximo a Vencer): `expirationDate <= today + notificationDaysBefore`.
-     * `VALID` (Vigente): `expirationDate > today + notificationDaysBefore`.
+| Acción / Caso de Uso | PLATFORM_ADMIN | CONSULTANT_ADMIN | TECHNICIAN | CLIENT |
+|---|:---:|:---:|:---:|:---:|
+| **Login (`POST /auth/login`)** | ✅ Sí | ✅ Sí | ✅ Sí | ✅ Sí |
+| **Listar Organizaciones (`GET /organizations`)** | ✅ Todas | ❌ 403 | ❌ 403 | ❌ 403 |
+| **Ver Organización (`GET /organizations/{id}`)** | ✅ Cualquier Org | ✅ Solo su Org | ❌ 403 | ❌ 403 |
+| **Crear Empresa (`POST /companies`)** | ✅ En cualquier Org | ✅ En su propia Org | ❌ 403 | ❌ 403 |
+| **Listar Empresas (`GET /companies`)** | ✅ Todas | ✅ Todas las de su Org | ✅ Solo las asignadas | ✅ Solo su empresa |
+| **Ver Detalle Empresa (`GET /companies/{id}`)** | ✅ Cualquier empresa | ✅ Solo de su Org (404 ajenas) | ✅ Solo si asignada (404 no asignadas) | ✅ Solo su empresa (404 otras) |
+| **Crear Usuario (`POST /users`)** | ✅ Cualquier rol/org | ✅ Solo en su Org (no PLATFORM_ADMIN) | ❌ 403 | ❌ 403 |
+| **Listar Usuarios (`GET /users`)** | ✅ Todos | ✅ Solo de su Org | ❌ 403 | ❌ 403 |
+| **Asignar Técnico (`POST /companies/{id}/technicians/{uId}`)** | ✅ Sí | ✅ Solo en su Org | ❌ 403 | ❌ 403 |
+| **Desasignar Técnico (`DELETE /companies/{id}/technicians/{uId}`)** | ✅ Sí | ✅ Solo en su Org | ❌ 403 | ❌ 403 |
+| **Listar Asignaciones (`GET /companies/{id}/technicians`)** | ✅ Sí | ✅ Solo en su Org | ❌ 403 | ❌ 403 |
 
 ---
 
-## 4. Entidades Planificadas para Días Posteriores
+## 4. Estrategia de Vencimientos (Base para Día 3)
 
-1. **`ExpirationDocument`**: Documentación técnica adjunta (PDFs de certificados de carga, informes de auditoría, comprobantes de seguro).
-2. **`NotificationRule`**: Reglas de notificación configurables por empresa o categoría (alertas por email, SMS o WhatsApp 60, 30, 15 y 5 días antes).
-3. **`Notification`**: Registro de historial de notificaciones enviadas y leídas.
-4. **`AuditLog`**: Pista de auditoría inmutable de cambios (quién modificó una fecha de vencimiento, cuándo y desde qué IP).
+### 4.1 Categorías de Vencimiento (`ExpirationCategory`)
+* `MATAFUEGOS`, `CAPACITACION`, `ART`, `VISITA_TECNICA`, `ASCENSOR`, `AUTOELEVADOR`, `SEGURO`, `MEDICION`, `DOCUMENTACION`, `PLAN_EVACUACION`, `OTRO`.
+
+### 4.2 Lógica de Estados: Operacional vs. Temporal
+1. **Estado Operativo (Persistido)**:
+   * `PENDING`: Obligación abierta.
+   * `COMPLETED`: Obligación cumplida.
+   * `CANCELLED`: Obligación anulada.
+2. **Estado Temporal (Calculado en tiempo de ejecución)**:
+   * `EXPIRED` (Vencido): `expirationDate < today`.
+   * `URGENT` (Urgente): `expirationDate <= today + 7 days`.
+   * `UPCOMING` (Próximo): `expirationDate <= today + notificationDaysBefore`.
+   * `VALID` (Vigente): `expirationDate > today + notificationDaysBefore`.

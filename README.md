@@ -13,28 +13,30 @@
 
 ---
 
-## 🏛️ Arquitectura del Sistema
+## 🏛️ Arquitectura del Sistema (Día 2 — Usuarios, Empresas y Permisos)
 
-PREVENIA adopta una arquitectura de **Modular Monolith** (Monolito Modular) orientada al dominio en el backend, desacoplada de una aplicación cliente moderna en **Next.js (App Router)**:
+PREVENIA adopta una arquitectura de **Modular Monolith** (Monolito Modular) orientada al dominio en el backend, con **Spring Security + JWT** y aislamiento multi-tenant estricto por `organization_id`, desacoplada de un cliente web moderno en **Next.js 15 (App Router)**:
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │             Navegador / Cliente Web                    │
-│             (Next.js 15 + TypeScript)                 │
+│      (Next.js 15 + AuthContext + Dynamic Roles)        │
 └───────────────────────────┬────────────────────────────┘
-                            │ HTTP / REST / JSON (CORS)
+                            │ HTTP / REST / Authorization: Bearer <JWT>
                             ▼
 ┌────────────────────────────────────────────────────────┐
 │       PREVENIA Backend (Spring Boot 3.3.4)             │
 │                                                        │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ organization │  │     user     │  │   company    │  │
+│  │     auth     │  │ organization │  │     user     │  │
+│  │ (Login, JWT) │  │  (Tenancy)   │  │ (Roles, Sec) │  │
 │  └──────────────┘  └──────────────┘  └──────────────┘  │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │  assignment  │  │  expiration  │  │    shared    │  │
+│  │   company    │  │  assignment  │  │    shared    │  │
+│  │ (Anti-IDOR)  │  │(Tech-Company)│  │(Error Advice)│  │
 │  └──────────────┘  └──────────────┘  └──────────────┘  │
 └───────────────────────────┬────────────────────────────┘
-                            │ JPA / Hibernate / Flyway
+                            │ JPA / Hibernate (validate) / Flyway (V1, V2)
                             ▼
 ┌────────────────────────────────────────────────────────┐
 │             PostgreSQL 16 (Multi-Tenant)               │
@@ -43,53 +45,53 @@ PREVENIA adopta una arquitectura de **Modular Monolith** (Monolito Modular) orie
 ```
 
 Para una explicación exhaustiva de decisiones técnicas, consultar:
-* 📘 [docs/architecture.md](file:///docs/architecture.md) — Filosofía arquitectónica, multi-tenancy, y estrategia cloud.
-* 📗 [docs/domain-model.md](file:///docs/domain-model.md) — Modelo de dominio, entidades, ciclo de vida y reglas de negocio.
-* 📙 [docs/database.md](file:///docs/database.md) — Diccionario de datos, restricciones, índices y migraciones Flyway.
+* 📘 [docs/architecture.md](file:///docs/architecture.md) — Filosofía arquitectónica, seguridad JWT, multi-tenancy y anti-IDOR.
+* 📗 [docs/domain-model.md](file:///docs/domain-model.md) — Modelo de dominio, matriz de permisos y entidades.
+* 📙 [docs/database.md](file:///docs/database.md) — Diccionario de datos, migraciones Flyway y catálogo de seeds.
 
 ---
 
-## 🛠️ Stack Tecnológico
+## 🔐 Matriz de Permisos
 
-* **Backend**:
-  * Java 21 LTS
-  * Spring Boot 3.3.4 (Spring Web, Spring Data JPA, Spring Validation, Spring Security, Spring Actuator)
-  * Flyway Database Migrations
-  * Lombok & Hibernate ORM (modo `validate`)
-  * Maven Wrapper (`mvnw`)
-* **Frontend**:
-  * Next.js 15 (App Router)
-  * React 19 & TypeScript 5.7
-  * Lucide React Icons
-  * Arquitectura Feature-based (`src/features`, `src/services`, `src/lib`, `src/components`)
-* **Persistencia & DevOps**:
-  * PostgreSQL 16 Alpine
-  * Docker & Docker Compose
-  * Multi-stage Dockerfiles optimizados para producción con usuarios sin privilegios root
+| Endpoint / Recurso | PLATFORM_ADMIN | CONSULTANT_ADMIN | TECHNICIAN | CLIENT |
+|---|:---:|:---:|:---:|:---:|
+| `POST /api/v1/auth/login` | ✅ Público | ✅ Público | ✅ Público | ✅ Público |
+| `GET /api/v1/companies` | ✅ Todas las empresas | ✅ Empresas de su Org | ✅ Solo asignadas | ✅ Solo su empresa |
+| `GET /api/v1/companies/{id}` | ✅ Todas las empresas | ✅ Solo de su Org (404 ajenas) | ✅ Solo si asignada (404 otras) | ✅ Solo su empresa (404 otras) |
+| `POST /api/v1/companies` | ✅ Sí (cualquier Org) | ✅ Sí (su propia Org) | ❌ 403 Forbidden | ❌ 403 Forbidden |
+| `POST /api/v1/users` | ✅ Sí | ✅ Sí (no PLATFORM_ADMIN) | ❌ 403 Forbidden | ❌ 403 Forbidden |
+| `GET /api/v1/users` | ✅ Todos | ✅ Solo de su Org | ❌ 403 Forbidden | ❌ 403 Forbidden |
+| `POST /api/v1/companies/{id}/technicians/{uId}` | ✅ Sí | ✅ Solo en su Org | ❌ 403 Forbidden | ❌ 403 Forbidden |
+| `DELETE /api/v1/companies/{id}/technicians/{uId}`| ✅ Sí | ✅ Solo en su Org | ❌ 403 Forbidden | ❌ 403 Forbidden |
+| `GET /api/v1/companies/{id}/technicians` | ✅ Sí | ✅ Solo en su Org | ❌ 403 Forbidden | ❌ 403 Forbidden |
+
+---
+
+## 👥 Credenciales de Prueba (Entorno de Desarrollo)
+
+| Email | Contraseña | Rol | Ámbito / Tenant |
+|---|---|---|---|
+| `platform@prevenia.com` | `Admin1234!` | `PLATFORM_ADMIN` | Administrador Global |
+| `admin@demo.com` | `Demo1234!` | `CONSULTANT_ADMIN` | Seguridad Integral Córdoba (Org A) |
+| `carlos@demo.com` | `Demo1234!` | `TECHNICIAN` | Org A (Asignado a: Macro, Andreani) |
+| `martin@demo.com` | `Demo1234!` | `TECHNICIAN` | Org A (Asignado a: Coca-Cola) |
+| `macro@demo.com` | `Demo1234!` | `CLIENT` | Org A (Asociado a: Banco Macro) |
+| `admin.b@demo.com` | `Demo1234!` | `CONSULTANT_ADMIN` | Prevención Litoral SRL (Org B) |
 
 ---
 
 ## 📋 Requisitos Previos
 
-Asegúrese de contar con las siguientes herramientas instaladas en su entorno:
-
 * **Java**: OpenJDK 21 LTS o superior.
 * **Node.js**: v20.x o v22.x+ (npm incluido).
-* **Docker & Docker Compose**: Docker Desktop o Docker Engine v24+.
+* **Docker & Docker Compose**: Docker Desktop o Engine v24+.
 * **Git**: v2.x+.
 
 ---
 
 ## 🚀 Guía de Inicio Rápido
 
-### 1. Clonar el Repositorio y Configurar Entorno
-
-```bash
-git clone <URL_DEL_REPOSITORIO>
-cd dmt_soft_3_vencimientos
-```
-
-Copiar el archivo de variables de entorno base:
+### 1. Variables de Entorno
 
 ```bash
 # Windows PowerShell
@@ -99,46 +101,38 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
+Variables clave en `.env`:
+* `JWT_SECRET`: Clave simétrica HMAC-SHA256 para firma de tokens.
+* `JWT_EXPIRATION_MINUTES`: Minutos de validez del JWT (default: 1440 = 24hs).
+
 ---
 
-### 2. Opción A — Ejecución Integral con Docker Compose (Recomendada)
-
-Levanta todo el stack (PostgreSQL, Backend Spring Boot y Frontend Next.js) en contenedores aislados:
+### 2. Opción A — Ejecución con Docker Compose (Recomendada)
 
 ```bash
 docker compose up --build -d
 ```
 
-Verificar el estado de los contenedores:
-
+Verificar estado:
 ```bash
 docker compose ps
 ```
 
-Detener el stack completo:
-
+Detener:
 ```bash
 docker compose down
 ```
 
-Para reiniciar la base de datos limpiando los volúmenes persistentes:
-
-```bash
-docker compose down -v
-```
-
 ---
 
-### 3. Opción B — Ejecución Híbrida / Desarrollo Local
+### 3. Opción B — Desarrollo Local Híbrido
 
-Ideal para flujo de desarrollo rápido con hot-reloading:
-
-#### Paso 1: Levantar únicamente PostgreSQL con Docker Compose
+#### Paso 1: Base de Datos PostgreSQL
 ```bash
 docker compose up postgres -d
 ```
 
-#### Paso 2: Ejecutar Backend Spring Boot
+#### Paso 2: Backend Spring Boot
 ```bash
 cd backend
 # Windows:
@@ -147,118 +141,66 @@ cd backend
 ./mvnw spring-boot:run
 ```
 
-El backend iniciará en el puerto `8080`, conectará automáticamente a PostgreSQL y ejecutará la migración Flyway `V1__initial_schema.sql`.
-
-#### Paso 3: Ejecutar Frontend Next.js (en otra terminal)
+#### Paso 3: Frontend Next.js (en otra terminal)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-El frontend estará disponible en `http://localhost:3000`.
+Acceder a:
+* **Frontend Cockpit / Login**: [http://localhost:3000](http://localhost:3000)
+* **API REST**: [http://localhost:8080/api/v1](http://localhost:8080/api/v1)
 
 ---
 
-## 🌐 URLs y Endpoints de Verificación
+## 🧪 Pruebas Manuales con cURL
 
-| Componente | URL / Endpoint | Descripción |
-|---|---|---|
-| **Frontend Dashboard** | [http://localhost:3000](http://localhost:3000) | Panel de verificación de estado y fundación Día 1 |
-| **System Info API** | [http://localhost:8080/api/v1/system/info](http://localhost:8080/api/v1/system/info) | Diagnóstico de versión y ambiente |
-| **Actuator Health** | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) | Healthcheck general y estado de conexión PostgreSQL |
-| **Base de Datos** | `localhost:5432` | DB: `prevenia`, User: `prevenia`, Pass: `prevenia_local_secret` |
-
----
-
-## 🧪 Pruebas y Validación de Calidad
-
-### Backend (Compilación, Verificación y Tests)
+### 1. Autenticación (Login)
 ```bash
-cd backend
-# Windows:
-.\mvnw.cmd clean verify
-# Linux / macOS:
-./mvnw clean verify
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"carlos@demo.com","password":"Demo1234!"}'
 ```
 
-### Frontend (Typecheck, Lint y Build de Producción)
+### 2. Consultar Empresas Asignadas (Carlos - TECHNICIAN)
+```bash
+curl -X GET http://localhost:8080/api/v1/companies \
+  -H "Authorization: Bearer <TOKEN_OBTENIDO>"
+```
+*(Devuelve únicamente Banco Macro y Andreani).*
+
+### 3. Comprobar Protección Anti-IDOR (Carlos intenta ver Coca-Cola)
+```bash
+curl -i -X GET http://localhost:8080/api/v1/companies/22222222-2222-2222-2222-222222222223 \
+  -H "Authorization: Bearer <TOKEN_CARLOS>"
+```
+*(Responde HTTP 404 NOT_FOUND con estructura de error limpia).*
+
+### 4. Intento de Creación de Empresa por Técnico (Bloqueado)
+```bash
+curl -i -X POST http://localhost:8080/api/v1/companies \
+  -H "Authorization: Bearer <TOKEN_CARLOS>" \
+  -H "Content-Type: application/json" \
+  -d '{"businessName":"Nueva Empresa Indebida"}'
+```
+*(Responde HTTP 403 FORBIDDEN).*
+
+---
+
+## 🧪 Ejecución de Tests Automatizados
+
+### Backend (Suite Completa de Seguridad e Integración Multi-Tenant)
+```bash
+cd backend
+.\mvnw.cmd clean verify
+```
+*(Ejecuta 31 tests automatizados que prueban exhaustivamente la matriz de permisos).*
+
+### Frontend (Typecheck, Lint y Build)
 ```bash
 cd frontend
 npm run typecheck
 npm run lint
 npm run build
 ```
-
----
-
-## 📂 Estructura del Proyecto
-
-```
-dmt_soft_3_vencimientos/
-├── backend/                             # Backend Spring Boot (Modular Monolith)
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/prevenia/
-│   │   │   │   ├── PreveniaApplication.java
-│   │   │   │   ├── shared/              # Clases base, excepciones, seguridad, CORS
-│   │   │   │   ├── system/              # Endpoints de diagnóstico del sistema
-│   │   │   │   ├── organization/        # Dominio de Organizaciones (Tenancy)
-│   │   │   │   ├── user/                # Dominio de Usuarios e Identidad
-│   │   │   │   ├── company/             # Dominio de Empresas Clientes
-│   │   │   │   ├── assignment/          # Dominio de Asignaciones Técnicas
-│   │   │   │   └── expiration/          # Dominio Núcleo de Vencimientos y Categorías
-│   │   │   └── resources/
-│   │   │       ├── application.yml      # Configuración base
-│   │   │       ├── application-local.yml# Perfil de desarrollo
-│   │   │       └── db/migration/
-│   │   │           └── V1__initial_schema.sql # Migración Flyway inicial
-│   │   └── test/                        # Tests unitarios y de integración
-│   ├── pom.xml                          # Dependencias Maven
-│   └── Dockerfile                       # Multi-stage Dockerfile para producción
-│
-├── frontend/                            # Frontend Next.js (App Router)
-│   ├── src/
-│   │   ├── app/                         # Páginas y layout raíz
-│   │   ├── components/                  # Componentes reutilizables
-│   │   ├── features/                    # Módulos organizados por feature
-│   │   ├── lib/                         # Cliente API tipado
-│   │   ├── services/                    # Servicios de backend
-│   │   └── types/                       # Definiciones TypeScript
-│   ├── package.json                     # Scripts y dependencias
-│   ├── tsconfig.json                    # Configuración TypeScript
-│   └── Dockerfile                       # Multi-stage Dockerfile para producción
-│
-├── docs/                                # Documentación de Arquitectura y Dominio
-│   ├── architecture.md
-│   ├── domain-model.md
-│   └── database.md
-│
-├── docker-compose.yml                   # Orquestación de contenedores locales
-├── .env.example                         # Plantilla de variables de entorno
-├── .gitignore                           # Exclusiones de Git
-└── README.md                            # Documentación principal
-```
-
----
-
-## 🧭 Preparación para el Día 2
-
-La fundación técnica establecida en el Día 1 deja los cimientos 100% listos para:
-1. **Autenticación & JWT**: Integración de filtros de seguridad en `SecurityConfig` (local o Cognito/OIDC).
-2. **Módulo Organization**: Servicios y endpoints para alta y gestión de consultoras.
-3. **Módulo User**: Registro, asignación de roles (`PLATFORM_ADMIN`, `CONSULTANT_ADMIN`, `TECHNICIAN`, `CLIENT`) y hash seguro de contraseñas.
-4. **Módulo Company**: CRUD de empresas clientes asociadas al tenant autenticado.
-5. **Módulo Assignment**: Lógica para asignar técnicos a empresas con restricciones de acceso.
-6. **Módulo Expiration**: Registro de vencimientos y cálculo dinámico de estados operativos y temporales.
-
----
-
-## 📄 Convenciones de Commits
-
-El proyecto sigue el estándar de **Conventional Commits**:
-* `feat(...)`: Nueva funcionalidad o módulo.
-* `fix(...)`: Corrección de errores.
-* `docs(...)`: Cambios en la documentación.
-* `chore(...)`: Tareas de mantenimiento, dependencias o tooling.
-* `refactor(...)`: Reestructuración de código sin alterar comportamiento.
