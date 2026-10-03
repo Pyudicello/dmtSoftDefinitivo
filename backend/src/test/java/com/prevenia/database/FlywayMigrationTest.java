@@ -12,11 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@TestPropertySource(properties = {
-        "spring.flyway.enabled=true",
-        "spring.jpa.hibernate.ddl-auto=none",
-        "spring.flyway.locations=classpath:db/migration"
-})
 class FlywayMigrationTest {
 
     @Autowired
@@ -29,9 +24,11 @@ class FlywayMigrationTest {
     void shouldSuccessfullyMigrateSchemaAndSeedCategories() {
         // Assert Flyway executed successfully
         var appliedMigrations = flyway.info().applied();
-        assertThat(appliedMigrations).isNotEmpty();
+        assertThat(appliedMigrations).hasSize(2);
         assertThat(appliedMigrations[0].getVersion().getVersion()).isEqualTo("1");
         assertThat(appliedMigrations[0].getDescription()).isEqualTo("initial schema");
+        assertThat(appliedMigrations[1].getVersion().getVersion()).isEqualTo("2");
+        assertThat(appliedMigrations[1].getDescription()).isEqualTo("add user company id and dev seed");
 
         // Verify seeded categories count
         Integer count = jdbcTemplate.queryForObject(
@@ -40,11 +37,20 @@ class FlywayMigrationTest {
         );
         assertThat(count).isEqualTo(11);
 
-        // Verify MATAFUEGOS and CAPACITACION categories exist
-        Integer matafuegosCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM expiration_categories WHERE code = 'MATAFUEGOS'",
-                Integer.class
-        );
-        assertThat(matafuegosCount).isEqualTo(1);
+        // Verify seeded organizations count
+        Integer orgCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM organizations", Integer.class);
+        assertThat(orgCount).isEqualTo(2);
+
+        // Verify seeded users count
+        Integer userCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users", Integer.class);
+        assertThat(userCount).isEqualTo(6);
+
+        // Verify seeded companies count
+        Integer companyCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM companies", Integer.class);
+        assertThat(companyCount).isEqualTo(4);
+
+        // Verify seeded assignments count
+        Integer assignmentCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM user_company_assignments", Integer.class);
+        assertThat(assignmentCount).isEqualTo(3);
     }
 }

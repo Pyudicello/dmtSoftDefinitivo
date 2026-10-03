@@ -26,6 +26,9 @@ public class User extends BaseEntity {
     @Column(name = "organization_id")
     private UUID organizationId;
 
+    @Column(name = "company_id")
+    private UUID companyId;
+
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
