@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { AuthProvider } from '@/context/AuthContext';
+import { Navbar } from '@/components/layout/Navbar';
 
 export const metadata: Metadata = {
-  title: 'PREVENIA — Plataforma SaaS de Gestión de Higiene y Seguridad Laboral',
-  description: 'Fundación técnica SaaS para consultoras y empresas de Higiene y Seguridad Laboral. Gestión centralizada de vencimientos y obligaciones normativas.',
+  title: 'PREVENIA — Plataforma SaaS de Higiene y Seguridad Laboral',
+  description: 'Gestión centralizada de vencimientos, empresas y seguridad multi-tenant para consultoras de Higiene y Seguridad.',
 };
 
 export default function RootLayout({
@@ -13,7 +15,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          <div className="container">
+            <Navbar />
+            {children}
+          </div>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

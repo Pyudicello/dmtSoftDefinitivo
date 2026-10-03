@@ -5,10 +5,28 @@ export class ApiClientError extends Error {
   constructor(
     public status: number,
     public statusText: string,
-    public errorBody?: unknown
+    public errorBody?: any
   ) {
     super(`API request failed with status ${status} (${statusText})`);
     this.name = 'ApiClientError';
+  }
+}
+
+export function getStoredAuthToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('prevenia_token');
+  }
+  return null;
+}
+
+export function setStoredAuthToken(token: string | null) {
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('prevenia_token', token);
+    } else {
+      localStorage.removeItem('prevenia_token');
+      localStorage.removeItem('prevenia_user');
+    }
   }
 }
 
@@ -18,10 +36,16 @@ export async function apiClient<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
-  const defaultHeaders: HeadersInit = {
+  const token = getStoredAuthToken();
+
+  const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
+
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
 
   const config: RequestInit = {
     ...options,
@@ -29,21 +53,29 @@ export async function apiClient<T>(
       ...defaultHeaders,
       ...options.headers,
     },
-    // Avoid caching in development / healthchecks
     cache: 'no-store',
   };
 
   try {
     const response = await fetch(url, config);
 
+    if (response.status === 401) {
+      // Clear invalid credentials on 401
+      setStoredAuthToken(null);
+    }
+
     if (!response.ok) {
-      let errorBody: unknown;
+      let errorBody: any;
       try {
         errorBody = await response.json();
       } catch {
         errorBody = await response.text();
       }
       throw new ApiClientError(response.status, response.statusText, errorBody);
+    }
+
+    if (response.status === 204) {
+      return null as T;
     }
 
     return (await response.json()) as T;
@@ -53,8 +85,8 @@ export async function apiClient<T>(
     }
     throw new Error(
       error instanceof Error
-        ? `Network or connection error: ${error.message}`
-        : 'Unknown connection failure'
+        ? error.message
+        : 'Network or connection error contacting PREVENIA backend'
     );
   }
 }
