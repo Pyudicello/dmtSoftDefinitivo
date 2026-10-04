@@ -46,4 +46,8 @@ public class ExpirationCategory extends BaseEntity {
     @Column(name = "active", nullable = false)
     @Builder.Default
     private boolean active = true;
+
+    public boolean isGlobal() {
+        return this.organizationId == null || this.isSystem;
+    }
 }

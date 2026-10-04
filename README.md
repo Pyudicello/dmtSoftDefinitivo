@@ -13,14 +13,14 @@
 
 ---
 
-## 🏛️ Arquitectura del Sistema (Día 2 — Usuarios, Empresas y Permisos)
+## 🏛️ Arquitectura del Sistema (Día 3 — Core de Vencimientos)
 
-PREVENIA adopta una arquitectura de **Modular Monolith** (Monolito Modular) orientada al dominio en el backend, con **Spring Security + JWT** y aislamiento multi-tenant estricto por `organization_id`, desacoplada de un cliente web moderno en **Next.js 15 (App Router)**:
+PREVENIA adopta una arquitectura de **Modular Monolith** (Monolito Modular) orientada al dominio en el backend, con **Spring Security + JWT**, aislamiento multi-tenant estricto por `organization_id`, motor de clasificación temporal desacoplado mediante `java.time.Clock` inyectable y un cliente web moderno en **Next.js 15 (App Router)**:
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │             Navegador / Cliente Web                    │
-│      (Next.js 15 + AuthContext + Dynamic Roles)        │
+│      (Next.js 15 + Cockpit de Vencimientos)            │
 └───────────────────────────┬────────────────────────────┘
                             │ HTTP / REST / Authorization: Bearer <JWT>
                             ▼
@@ -32,38 +32,60 @@ PREVENIA adopta una arquitectura de **Modular Monolith** (Monolito Modular) orie
 │  │ (Login, JWT) │  │  (Tenancy)   │  │ (Roles, Sec) │  │
 │  └──────────────┘  └──────────────┘  └──────────────┘  │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │   company    │  │  assignment  │  │    shared    │  │
-│  │ (Anti-IDOR)  │  │(Tech-Company)│  │(Error Advice)│  │
+│  │   company    │  │  assignment  │  │  expiration  │  │
+│  │ (Anti-IDOR)  │  │(Tech-Company)│  │ (Core Día 3) │  │
 │  └──────────────┘  └──────────────┘  └──────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  ExpirationDeadlineClassifier + TimeConfig Clock │  │
+│  └──────────────────────────────────────────────────┘  │
 └───────────────────────────┬────────────────────────────┘
-                            │ JPA / Hibernate (validate) / Flyway (V1, V2)
+                            │ JPA / Hibernate / Flyway (V1, V2, V3)
                             ▼
 ┌────────────────────────────────────────────────────────┐
 │             PostgreSQL 16 (Multi-Tenant)               │
-│     (UUIDs, Schema versionado, Índices Compuestos)    │
+│     (UUIDs, Constraints de Fechas, Índices Compuestos)│
 └────────────────────────────────────────────────────────┘
 ```
 
 Para una explicación exhaustiva de decisiones técnicas, consultar:
-* 📘 [docs/architecture.md](file:///docs/architecture.md) — Filosofía arquitectónica, seguridad JWT, multi-tenancy y anti-IDOR.
-* 📗 [docs/domain-model.md](file:///docs/domain-model.md) — Modelo de dominio, matriz de permisos y entidades.
-* 📙 [docs/database.md](file:///docs/database.md) — Diccionario de datos, migraciones Flyway y catálogo de seeds.
+* 📘 [docs/architecture.md](file:///docs/architecture.md) — Filosofía arquitectónica, motor de especificaciones JPA y aislamiento multi-tenant.
+* 📗 [docs/domain-model.md](file:///docs/domain-model.md) — Modelo de dominio, ciclo de vida, clasificación temporal y matriz de permisos.
+* 📙 [docs/database.md](file:///docs/database.md) — Diccionario de datos, migración V3, índices de alto rendimiento y constraints.
 
 ---
 
-## 🔐 Matriz de Permisos
+## ⏱️ Motor de Clasificación Temporal
+
+El backend calcula el estado temporal (`deadlineStatus`) al vuelo en cada consulta inyectando un bean `Clock`, sin persistir estados temporales volátiles:
+
+| Clasificación | Condición Temporal | Días Restantes (`daysUntilExpiration`) | Significado |
+|---|---|---|---|
+| `EXPIRED` | `expirationDate < hoy` | `< 0` | Vencido. Plazo legal expirado. |
+| `URGENT` | `hoy <= expirationDate <= hoy + 7d` | `0 a 7` | Urgente. Vence hoy o en los próximos 7 días inclusive. |
+| `UPCOMING` | `hoy + 8d <= expirationDate <= hoy + 30d` | `8 a 30` | Próximo. Ventana de gestión mensual. |
+| `CURRENT` | `expirationDate > hoy + 30d` | `> 30` | Vigente. Margen holgado. |
+
+* **Regla de Precedencia**: Los vencimientos con `lifecycleStatus = COMPLETED` o `CANCELLED` devuelven `deadlineStatus = null` y no computan como alertas activas.
+
+---
+
+## 🔐 Matriz de Permisos del Core de Vencimientos
 
 | Endpoint / Recurso | PLATFORM_ADMIN | CONSULTANT_ADMIN | TECHNICIAN | CLIENT |
 |---|:---:|:---:|:---:|:---:|
 | `POST /api/v1/auth/login` | ✅ Público | ✅ Público | ✅ Público | ✅ Público |
-| `GET /api/v1/companies` | ✅ Todas las empresas | ✅ Empresas de su Org | ✅ Solo asignadas | ✅ Solo su empresa |
-| `GET /api/v1/companies/{id}` | ✅ Todas las empresas | ✅ Solo de su Org (404 ajenas) | ✅ Solo si asignada (404 otras) | ✅ Solo su empresa (404 otras) |
-| `POST /api/v1/companies` | ✅ Sí (cualquier Org) | ✅ Sí (su propia Org) | ❌ 403 Forbidden | ❌ 403 Forbidden |
-| `POST /api/v1/users` | ✅ Sí | ✅ Sí (no PLATFORM_ADMIN) | ❌ 403 Forbidden | ❌ 403 Forbidden |
-| `GET /api/v1/users` | ✅ Todos | ✅ Solo de su Org | ❌ 403 Forbidden | ❌ 403 Forbidden |
-| `POST /api/v1/companies/{id}/technicians/{uId}` | ✅ Sí | ✅ Solo en su Org | ❌ 403 Forbidden | ❌ 403 Forbidden |
-| `DELETE /api/v1/companies/{id}/technicians/{uId}`| ✅ Sí | ✅ Solo en su Org | ❌ 403 Forbidden | ❌ 403 Forbidden |
-| `GET /api/v1/companies/{id}/technicians` | ✅ Sí | ✅ Solo en su Org | ❌ 403 Forbidden | ❌ 403 Forbidden |
+| `GET /api/v1/expirations` | ✅ Todos | ✅ De su Org | ✅ De empresas asignadas | ✅ Solo su empresa |
+| `GET /api/v1/expirations/upcoming` | ✅ Todos | ✅ De su Org | ✅ De empresas asignadas | ✅ Solo su empresa |
+| `GET /api/v1/expirations/expired` | ✅ Todos | ✅ De su Org | ✅ De empresas asignadas | ✅ Solo su empresa |
+| `GET /api/v1/companies/{id}/expirations` | ✅ Cualquiera | ✅ Solo de su Org | ✅ Solo si asignada | ✅ Solo su empresa |
+| `GET /api/v1/expirations/{id}` | ✅ Cualquiera | ✅ Solo de su Org (404 ajenas) | ✅ Solo si asignada (404 otras) | ✅ Solo su empresa (404 otras) |
+| `POST /api/v1/expirations` | ✅ Cualquier Org | ✅ En su Org | ✅ En empresas asignadas | ❌ 403 Forbidden |
+| `PUT /api/v1/expirations/{id}` | ✅ Sí | ✅ Solo en su Org | ✅ Solo en empresas asignadas | ❌ 403 Forbidden |
+| `POST /api/v1/expirations/{id}/complete` | ✅ Sí | ✅ Solo en su Org | ✅ Solo en empresas asignadas | ❌ 403 Forbidden |
+| `POST /api/v1/expirations/{id}/cancel` | ✅ Sí | ✅ Solo en su Org | ✅ Solo en empresas asignadas | ❌ 403 Forbidden |
+| `DELETE /api/v1/expirations/{id}` | ✅ Sí | ✅ Solo en su Org | ✅ Solo en empresas asignadas | ❌ 403 Forbidden |
+| `GET /api/v1/expiration-categories` | ✅ Todas | ✅ Globales + Org | ✅ Globales + Org | ✅ Globales + Org |
+| `POST /api/v1/expiration-categories` | ✅ Global o Org | ✅ En su Org | ❌ 403 Forbidden | ❌ 403 Forbidden |
 
 ---
 
@@ -101,9 +123,11 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-Variables clave en `.env`:
+Variables clave de configuración:
 * `JWT_SECRET`: Clave simétrica HMAC-SHA256 para firma de tokens.
-* `JWT_EXPIRATION_MINUTES`: Minutos de validez del JWT (default: 1440 = 24hs).
+* `APP_EXPIRATION_URGENT_DAYS`: Umbral para clasificación `URGENT` (default: `7`).
+* `APP_EXPIRATION_UPCOMING_DAYS`: Umbral para clasificación `UPCOMING` (default: `30`).
+* `APP_TIME_ZONE`: Zona horaria del sistema (default: `America/Argentina/Buenos_Aires`).
 
 ---
 
@@ -149,55 +173,81 @@ npm run dev
 ```
 
 Acceder a:
-* **Frontend Cockpit / Login**: [http://localhost:3000](http://localhost:3000)
+* **Cockpit Web**: [http://localhost:3000](http://localhost:3000)
+* **Vencimientos Cockpit**: [http://localhost:3000/expirations](http://localhost:3000/expirations)
 * **API REST**: [http://localhost:8080/api/v1](http://localhost:8080/api/v1)
 
 ---
 
 ## 🧪 Pruebas Manuales con cURL
 
-### 1. Autenticación (Login)
+### 1. Autenticación como Técnico Carlos
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"carlos@demo.com","password":"Demo1234!"}'
 ```
 
-### 2. Consultar Empresas Asignadas (Carlos - TECHNICIAN)
+### 2. Consultar Vencimientos Autorizados (Carlos ve solo Macro y Andreani)
 ```bash
-curl -X GET http://localhost:8080/api/v1/companies \
-  -H "Authorization: Bearer <TOKEN_OBTENIDO>"
+curl -X GET "http://localhost:8080/api/v1/expirations?page=0&size=10" \
+  -H "Authorization: Bearer <TOKEN_CARLOS>"
 ```
-*(Devuelve únicamente Banco Macro y Andreani).*
 
-### 3. Comprobar Protección Anti-IDOR (Carlos intenta ver Coca-Cola)
+### 3. Consultar Próximos Vencimientos (≤ 30 días)
 ```bash
-curl -i -X GET http://localhost:8080/api/v1/companies/22222222-2222-2222-2222-222222222223 \
+curl -X GET "http://localhost:8080/api/v1/expirations/upcoming" \
+  -H "Authorization: Bearer <TOKEN_CARLOS>"
+```
+
+### 4. Consultar Vencimientos Vencidos (< Hoy)
+```bash
+curl -X GET "http://localhost:8080/api/v1/expirations/expired" \
+  -H "Authorization: Bearer <TOKEN_CARLOS>"
+```
+
+### 5. Registrar un Nuevo Vencimiento (Carlos en Banco Macro)
+```bash
+curl -X POST http://localhost:8080/api/v1/expirations \
+  -H "Authorization: Bearer <TOKEN_CARLOS>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "companyId": "33333333-3333-3333-3333-333333333331",
+    "categoryId": "44444444-4444-4444-4444-444444444441",
+    "title": "Recarga anual matafuegos sucursal Centro",
+    "description": "Extintores ABC del edificio central",
+    "issueDate": "2026-09-01",
+    "expirationDate": "2026-10-15",
+    "notes": "Proveedor habitual: Extintores Córdoba"
+  }'
+```
+
+### 6. Completar un Vencimiento
+```bash
+curl -X POST http://localhost:8080/api/v1/expirations/<EXPIRATION_ID>/complete \
+  -H "Authorization: Bearer <TOKEN_CARLOS>" \
+  -H "Content-Type: application/json" \
+  -d '{"notes":"Capacitación de evacuación realizada y certificada"}'
+```
+
+### 7. Comprobar Protección Anti-IDOR (Carlos intenta consultar vencimiento de Coca-Cola)
+```bash
+curl -i -X GET http://localhost:8080/api/v1/expirations/55555555-5555-5555-5555-555555555556 \
   -H "Authorization: Bearer <TOKEN_CARLOS>"
 ```
 *(Responde HTTP 404 NOT_FOUND con estructura de error limpia).*
-
-### 4. Intento de Creación de Empresa por Técnico (Bloqueado)
-```bash
-curl -i -X POST http://localhost:8080/api/v1/companies \
-  -H "Authorization: Bearer <TOKEN_CARLOS>" \
-  -H "Content-Type: application/json" \
-  -d '{"businessName":"Nueva Empresa Indebida"}'
-```
-*(Responde HTTP 403 FORBIDDEN).*
 
 ---
 
 ## 🧪 Ejecución de Tests Automatizados
 
-### Backend (Suite Completa de Seguridad e Integración Multi-Tenant)
+### Backend (62 Tests Automatizados de Dominio, Fechas e Integración Multi-Tenant)
 ```bash
 cd backend
 .\mvnw.cmd clean verify
 ```
-*(Ejecuta 31 tests automatizados que prueban exhaustivamente la matriz de permisos).*
 
-### Frontend (Typecheck, Lint y Build)
+### Frontend (Typecheck, Lint y Build de Producción)
 ```bash
 cd frontend
 npm run typecheck

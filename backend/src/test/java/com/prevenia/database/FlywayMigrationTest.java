@@ -24,11 +24,13 @@ class FlywayMigrationTest {
     void shouldSuccessfullyMigrateSchemaAndSeedCategories() {
         // Assert Flyway executed successfully
         var appliedMigrations = flyway.info().applied();
-        assertThat(appliedMigrations).hasSize(2);
+        assertThat(appliedMigrations).hasSize(3);
         assertThat(appliedMigrations[0].getVersion().getVersion()).isEqualTo("1");
         assertThat(appliedMigrations[0].getDescription()).isEqualTo("initial schema");
         assertThat(appliedMigrations[1].getVersion().getVersion()).isEqualTo("2");
         assertThat(appliedMigrations[1].getDescription()).isEqualTo("add user company id and dev seed");
+        assertThat(appliedMigrations[2].getVersion().getVersion()).isEqualTo("3");
+        assertThat(appliedMigrations[2].getDescription()).isEqualTo("update expiration core");
 
         // Verify seeded categories count
         Integer count = jdbcTemplate.queryForObject(
@@ -52,5 +54,10 @@ class FlywayMigrationTest {
         // Verify seeded assignments count
         Integer assignmentCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM user_company_assignments", Integer.class);
         assertThat(assignmentCount).isEqualTo(3);
+
+        // Verify seeded expirations count
+        Integer expirationCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM expirations", Integer.class);
+        assertThat(expirationCount).isGreaterThanOrEqualTo(10);
     }
 }
+

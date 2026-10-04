@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -48,7 +50,7 @@ public class Expiration extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
-    private ExpirationStatus status = ExpirationStatus.PENDING;
+    private ExpirationLifecycleStatus lifecycleStatus = ExpirationLifecycleStatus.ACTIVE;
 
     @Column(name = "responsible_user_id")
     private UUID responsibleUserId;
@@ -65,9 +67,38 @@ public class Expiration extends BaseEntity {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "completed_at")
+    private OffsetDateTime completedAt;
+
+    @Column(name = "completion_notes", columnDefinition = "TEXT")
+    private String completionNotes;
+
+    @Column(name = "cancelled_at")
+    private OffsetDateTime cancelledAt;
+
+    @Column(name = "cancel_reason", length = 255)
+    private String cancelReason;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
+
     @Column(name = "created_by")
     private UUID createdBy;
 
     @Column(name = "updated_by")
     private UUID updatedBy;
+
+    public boolean isActive() {
+        return this.lifecycleStatus == ExpirationLifecycleStatus.ACTIVE;
+    }
+
+    public boolean isCompleted() {
+        return this.lifecycleStatus == ExpirationLifecycleStatus.COMPLETED;
+    }
+
+    public boolean isCancelled() {
+        return this.lifecycleStatus == ExpirationLifecycleStatus.CANCELLED;
+    }
 }

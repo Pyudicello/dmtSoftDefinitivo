@@ -9,6 +9,7 @@ export interface UserSummary {
   email: string;
   firstName: string;
   lastName: string;
+  fullName?: string;
   role: UserRole;
   organizationId: string | null;
   companyId: string | null;
@@ -36,6 +37,130 @@ export interface Company {
   status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
   createdAt: string;
   updatedAt: string;
+}
+
+export type ExpirationLifecycleStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+
+export type ExpirationDeadlineStatus = 'CURRENT' | 'UPCOMING' | 'URGENT' | 'EXPIRED';
+
+export type RecurrenceType =
+  | 'NONE'
+  | 'MONTHLY'
+  | 'QUARTERLY'
+  | 'SEMIANNUAL'
+  | 'YEARLY'
+  | 'CUSTOM';
+
+export interface CategorySummary {
+  id: string;
+  code: string;
+  name: string;
+  icon?: string;
+  colorCode?: string;
+  isSystem: boolean;
+}
+
+export interface CompanySummary {
+  id: string;
+  businessName: string;
+  legalName?: string;
+  taxId?: string;
+}
+
+export interface ExpirationCategory {
+  id: string;
+  organizationId?: string;
+  code: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  colorCode?: string;
+  isSystem: boolean;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Expiration {
+  id: string;
+  organizationId: string;
+  company: CompanySummary;
+  category: CategorySummary;
+  title: string;
+  description?: string;
+  issueDate?: string;
+  expirationDate: string;
+  lifecycleStatus: ExpirationLifecycleStatus;
+  deadlineStatus?: ExpirationDeadlineStatus | null;
+  daysUntilExpiration?: number | null;
+  responsible?: UserSummary | null;
+  recurrenceType: RecurrenceType;
+  notificationDaysBefore: number;
+  notes?: string;
+  completedAt?: string | null;
+  completionNotes?: string | null;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateExpirationPayload {
+  companyId: string;
+  categoryId: string;
+  title: string;
+  description?: string;
+  issueDate?: string;
+  expirationDate: string;
+  responsibleUserId?: string;
+  recurrenceType?: RecurrenceType;
+  notificationDaysBefore?: number;
+  notes?: string;
+}
+
+export interface UpdateExpirationPayload {
+  categoryId: string;
+  title: string;
+  description?: string;
+  issueDate?: string;
+  expirationDate: string;
+  responsibleUserId?: string;
+  recurrenceType?: RecurrenceType;
+  notificationDaysBefore?: number;
+  notes?: string;
+}
+
+export interface CompleteExpirationPayload {
+  completedAt?: string;
+  notes?: string;
+}
+
+export interface CancelExpirationPayload {
+  reason?: string;
+}
+
+export interface ExpirationFilterParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+  companyId?: string;
+  categoryId?: string;
+  lifecycleStatus?: ExpirationLifecycleStatus;
+  deadlineStatus?: ExpirationDeadlineStatus;
+  responsibleUserId?: string;
+  from?: string;
+  to?: string;
+  search?: string;
+}
+
+export interface CreateCategoryPayload {
+  code: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  colorCode?: string;
+  organizationId?: string;
 }
 
 export interface PageResponse<T> {

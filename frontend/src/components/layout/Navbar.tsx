@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Shield, Building2, LogOut, LogIn, User as UserIcon, Activity } from 'lucide-react';
+import { Shield, Building2, LogOut, LogIn, User as UserIcon, Activity, Clock } from 'lucide-react';
 
 export function Navbar() {
   const { user, role, isAuthenticated, logout } = useAuth();
@@ -48,7 +48,7 @@ export function Navbar() {
           </div>
         </Link>
 
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
           <Link
             href="/"
             style={{
@@ -80,6 +80,24 @@ export function Navbar() {
           >
             <Building2 size={16} />
             <span>Empresas</span>
+          </Link>
+          <Link
+            href="/expirations"
+            style={{
+              color: pathname.startsWith('/expirations') ? 'var(--text-primary)' : 'var(--text-secondary)',
+              fontWeight: pathname.startsWith('/expirations') ? 600 : 400,
+              textDecoration: 'none',
+              fontSize: '0.9rem',
+              padding: '0.35rem 0.65rem',
+              borderRadius: '6px',
+              background: pathname.startsWith('/expirations') ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <Clock size={16} />
+            <span>Vencimientos</span>
           </Link>
         </div>
       </div>

@@ -1,7 +1,7 @@
 package com.prevenia.expiration.domain;
 
-public enum ExpirationStatus {
-    PENDING,
+public enum ExpirationLifecycleStatus {
+    ACTIVE,
     COMPLETED,
     CANCELLED
 }

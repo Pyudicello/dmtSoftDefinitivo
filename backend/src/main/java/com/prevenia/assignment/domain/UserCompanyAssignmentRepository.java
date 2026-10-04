@@ -16,5 +16,10 @@ public interface UserCompanyAssignmentRepository extends JpaRepository<UserCompa
 
     List<UserCompanyAssignment> findAllByOrganizationIdAndUserIdAndActiveTrue(UUID orgId, UUID userId);
 
+    List<UserCompanyAssignment> findByUserIdAndActiveTrue(UUID userId);
+
     boolean existsByOrganizationIdAndUserIdAndCompanyIdAndActiveTrue(UUID orgId, UUID userId, UUID companyId);
+
+    boolean existsByUserIdAndCompanyIdAndActiveTrue(UUID userId, UUID companyId);
 }
+

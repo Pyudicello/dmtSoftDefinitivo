@@ -1,127 +1,95 @@
-# PREVENIA — Documento de Base de Datos y Modelo Relacional (v0.2 — Día 2)
+# PREVENIA — Esquema de Base de Datos (v0.3 — Día 3)
 
-## 1. Convenciones y Estándares de Diseño
-
-* **Motor**: PostgreSQL 16+.
-* **Nomenclatura**:
-  * Tablas y Columnas: `snake_case` en plural para tablas (`organizations`, `users`, `companies`, `user_company_assignments`, `expirations`).
-  * Claves Primarias: `id UUID PRIMARY KEY`.
-  * Claves Foráneas: `fk_<tabla_origen>_<tabla_destino_o_campo>` (ej: `fk_users_company`).
-  * Claves Únicas: `uk_<tabla>_<campos>` (ej: `uk_assignments_user_company`).
-  * Restricciones Check: `chk_<tabla>_<campo>` (ej: `chk_users_role`).
-  * Índices: `idx_<tabla>_<campo(s)>` (ej: `idx_companies_organization_id`).
-* **Zonas Horarias**: Columnas `TIMESTAMP WITH TIME ZONE` (`TIMESTAMPTZ`), asegurando registros normalizados en UTC.
-* **Identificadores**: `UUID v4` nativo para todas las tablas.
+## 1. Motor y Estrategia de Persistencia
+* **RDBMS**: PostgreSQL 16 (Compatible con H2 en modo PostgreSQL para tests de integración).
+* **Gestor de Migraciones**: Flyway.
+* **Política de Migraciones**: Inmutables una vez aplicadas (`V1`, `V2`, `V3`).
 
 ---
 
-## 2. Historial de Migraciones Flyway
+## 2. Historial de Migraciones
 
-| Versión | Archivo | Descripción |
+| Versión | Archivo | Propósito |
 |---|---|---|
-| **V1** | `V1__initial_schema.sql` | Creación de tablas base: `organizations`, `users`, `companies`, `user_company_assignments`, `expiration_categories`, `expirations`, índices y constraints. |
-| **V2** | `V2__add_user_company_id_and_dev_seed.sql` | Agrega columna `company_id` a `users` con FK a `companies(id)`. Carga de datos de prueba determinísticos (2 Organizaciones, 4 Empresas, 6 Usuarios con passwords BCrypt, y 3 Asignaciones). |
+| **V1** | `V1__init_schema.sql` | Esquema fundacional: `organizations`, `users`, `companies`, `expiration_categories`, `expirations`. |
+| **V2** | `V2__security_and_roles_schema.sql` | Roles, `user_company_assignments`, índices de seguridad y seeds de usuarios/empresas. |
+| **V3** | `V3__update_expiration_core.sql` | Core de Vencimientos: actualización de estados de ciclo de vida (`ACTIVE`, `COMPLETED`, `CANCELLED`), campos de completado/cancelado, `@Version` para bloqueo optimista, constraint `chk_expirations_dates`, índices compuestos e inserción de seeds operativos. |
 
 ---
 
-## 3. Diccionario de Tablas
+## 3. Tablas del Core de Vencimientos
 
-### 3.1 `organizations`
-Inquilinos principales (consultoras).
-
-| Columna | Tipo | Nulable | Restricciones / Default | Descripción |
-|---|---|---|---|---|
-| `id` | `UUID` | NO | `PRIMARY KEY` | Identificador único |
-| `name` | `VARCHAR(150)` | NO | | Nombre comercial de la consultora |
-| `legal_name` | `VARCHAR(255)` | SÍ | | Razón social legal |
-| `tax_id` | `VARCHAR(30)` | SÍ | | CUIT / Identificación fiscal |
-| `email` | `VARCHAR(255)` | NO | | Email corporativo |
-| `phone` | `VARCHAR(50)` | SÍ | | Teléfono de contacto |
-| `status` | `VARCHAR(30)` | NO | `DEFAULT 'ACTIVE'`, `chk_organizations_status` | `ACTIVE`, `SUSPENDED`, `INACTIVE` |
-| `created_at` | `TIMESTAMPTZ` | NO | `DEFAULT CURRENT_TIMESTAMP` | Fecha de creación UTC |
-| `updated_at` | `TIMESTAMPTZ` | NO | `DEFAULT CURRENT_TIMESTAMP` | Fecha de actualización UTC |
-
----
-
-### 3.2 `users`
-Usuarios, roles y credenciales seguras.
-
-| Columna | Tipo | Nulable | Restricciones / Default | Descripción |
-|---|---|---|---|---|
-| `id` | `UUID` | NO | `PRIMARY KEY` | Identificador único |
-| `organization_id` | `UUID` | SÍ | `FK -> organizations(id) RESTRICT` | Organización (NULL solo para PLATFORM_ADMIN) |
-| `company_id` | `UUID` | SÍ | `FK -> companies(id) SET NULL` | Empresa cliente asociada (rol `CLIENT`) |
-| `first_name` | `VARCHAR(100)` | NO | | Nombre |
-| `last_name` | `VARCHAR(100)` | NO | | Apellido |
-| `email` | `VARCHAR(255)` | NO | `UNIQUE` | Correo electrónico de acceso |
-| `password_hash` | `VARCHAR(255)` | SÍ | | Hash BCrypt (10 rounds) |
-| `external_identity_id` | `VARCHAR(255)` | SÍ | | Sub de Cognito / OIDC futuro |
-| `role` | `VARCHAR(50)` | NO | `chk_users_role` | `PLATFORM_ADMIN`, `CONSULTANT_ADMIN`, `TECHNICIAN`, `CLIENT` |
-| `status` | `VARCHAR(30)` | NO | `DEFAULT 'ACTIVE'`, `chk_users_status` | `ACTIVE`, `INACTIVE`, `BLOCKED` |
-| `created_at` | `TIMESTAMPTZ` | NO | `DEFAULT CURRENT_TIMESTAMP` | Creación UTC |
-| `updated_at` | `TIMESTAMPTZ` | NO | `DEFAULT CURRENT_TIMESTAMP` | Actualización UTC |
-
+### 3.1 `expiration_categories` (Categorías de Vencimiento)
+```sql
+CREATE TABLE expiration_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    code VARCHAR(50) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    icon VARCHAR(50),
+    color_code VARCHAR(20),
+    is_system BOOLEAN NOT NULL DEFAULT FALSE,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+* **Aislamiento Global vs Tenant**:
+  * Si `organization_id IS NULL` e `is_system = TRUE`: Categoría del sistema compartida.
+  * Si `organization_id IS NOT NULL`: Categoría propia de la consultora.
 * **Índices**:
-  * `idx_users_organization_id` ON (`organization_id`)
-  * `idx_users_company_id` ON (`company_id`)
-  * `idx_users_role` ON (`role`)
-  * `idx_users_status` ON (`status`)
+  * `idx_exp_cat_org`: `(organization_id)`
+  * `idx_exp_cat_code`: `(code)`
+  * `idx_exp_cat_system`: `(is_system, active)`
 
 ---
 
-### 3.3 `companies`
-Empresas clientes administradas por una consultora.
+### 3.2 `expirations` (Obligaciones y Vencimientos)
+```sql
+CREATE TABLE expirations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    category_id UUID NOT NULL REFERENCES expiration_categories(id) ON DELETE RESTRICT,
+    responsible_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    issue_date DATE,
+    expiration_date DATE NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    recurrence_type VARCHAR(30) NOT NULL DEFAULT 'NONE',
+    notification_days_before INT NOT NULL DEFAULT 30,
+    notes TEXT,
+    completed_at TIMESTAMPTZ,
+    completion_notes TEXT,
+    cancelled_at TIMESTAMPTZ,
+    cancel_reason TEXT,
+    version INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID,
+    updated_by UUID,
+    
+    CONSTRAINT chk_expirations_status CHECK (status IN ('ACTIVE', 'COMPLETED', 'CANCELLED')),
+    CONSTRAINT chk_expirations_dates CHECK (issue_date IS NULL OR issue_date <= expiration_date)
+);
+```
 
-| Columna | Tipo | Nulable | Restricciones / Default | Descripción |
-|---|---|---|---|---|
-| `id` | `UUID` | NO | `PRIMARY KEY` | Identificador único |
-| `organization_id` | `UUID` | NO | `FK -> organizations(id) CASCADE` | Consultora administradora |
-| `business_name` | `VARCHAR(150)` | NO | | Nombre de fantasía / comercial |
-| `legal_name` | `VARCHAR(255)` | SÍ | | Razón social |
-| `tax_id` | `VARCHAR(30)` | SÍ | | CUIT de la empresa cliente |
-| `address` | `VARCHAR(255)` | SÍ | | Dirección postal |
-| `city` | `VARCHAR(100)` | SÍ | | Ciudad |
-| `province` | `VARCHAR(100)` | SÍ | | Provincia / Estado |
-| `country` | `VARCHAR(50)` | NO | `DEFAULT 'AR'` | Código de país ISO |
-| `email` | `VARCHAR(255)` | SÍ | | Correo electrónico |
-| `phone` | `VARCHAR(50)` | SÍ | | Teléfono de contacto |
-| `status` | `VARCHAR(30)` | NO | `DEFAULT 'ACTIVE'`, `chk_companies_status` | `ACTIVE`, `INACTIVE`, `ARCHIVED` |
-| `created_at` | `TIMESTAMPTZ` | NO | `DEFAULT CURRENT_TIMESTAMP` | Creación UTC |
-| `updated_at` | `TIMESTAMPTZ` | NO | `DEFAULT CURRENT_TIMESTAMP` | Actualización UTC |
+* **Restricciones de Integridad (Constraints)**:
+  * `chk_expirations_status`: Valida que el estado administrativo persista solo valores del enum `ExpirationLifecycleStatus`.
+  * `chk_expirations_dates`: Valida que la fecha de emisión no sea posterior a la fecha de vencimiento.
+* **Concurrencia Optimista**: Columna `version INT NOT NULL DEFAULT 0` mapeada con `@Version` en JPA para prevenir *lost updates* concurrentes entre técnicos.
+* **Índices de Alto Rendimiento**:
+  * `idx_expirations_org_date`: `(organization_id, expiration_date)`
+  * `idx_expirations_company_date`: `(company_id, expiration_date)`
+  * `idx_expirations_org_status`: `(organization_id, status)`
+  * `idx_expirations_category`: `(category_id)`
+  * `idx_expirations_resp_user`: `(responsible_user_id)`
+  * `idx_expirations_dates`: `(expiration_date)`
 
 ---
 
-### 3.4 `user_company_assignments`
-Asignación de técnicos a empresas clientes.
-
-| Columna | Tipo | Nulable | Restricciones / Default | Descripción |
-|---|---|---|---|---|
-| `id` | `UUID` | NO | `PRIMARY KEY` | Identificador único |
-| `organization_id` | `UUID` | NO | `FK -> organizations(id) CASCADE` | Tenant |
-| `user_id` | `UUID` | NO | `FK -> users(id) CASCADE` | Técnico asignado |
-| `company_id` | `UUID` | NO | `FK -> companies(id) CASCADE` | Empresa cliente asignada |
-| `assigned_at` | `TIMESTAMPTZ` | NO | `DEFAULT CURRENT_TIMESTAMP` | Fecha de asignación |
-| `active` | `BOOLEAN` | NO | `DEFAULT TRUE` | Estado de la asignación |
-| `created_at` | `TIMESTAMPTZ` | NO | `DEFAULT CURRENT_TIMESTAMP` | Creación UTC |
-| `updated_at` | `TIMESTAMPTZ` | NO | `DEFAULT CURRENT_TIMESTAMP` | Actualización UTC |
-
-* **Restricción Única**: `uk_assignments_user_company` ON (`organization_id`, `user_id`, `company_id`)
-
----
-
-## 4. Datos Semilla para Desarrollo Local (`V2`)
-
-| Tipo | ID / UUID | Nombre / Email | Rol / Detalle | Password Inicial |
-|---|---|---|---|---|
-| **Org A** | `11111111-1111-1111-1111-111111111111` | Seguridad Integral Córdoba | Consultora Principal | - |
-| **Org B** | `11111111-1111-1111-1111-111111111112` | Prevención Litoral SRL | Consultora Secundaria | - |
-| **Empresa (Org A)** | `22222222-2222-2222-2222-222222222221` | Banco Macro | CUIT: 30-50000173-5 | - |
-| **Empresa (Org A)** | `22222222-2222-2222-2222-222222222222` | Andreani Logística | CUIT: 30-52994025-9 | - |
-| **Empresa (Org A)** | `22222222-2222-2222-2222-222222222223` | Coca-Cola Andina | CUIT: 30-54668721-3 | - |
-| **Empresa (Org B)** | `22222222-2222-2222-2222-222222222224` | TechCorp Litoral | CUIT: 30-71234567-8 | - |
-| **Usuario Global** | `33333333-3333-3333-3333-333333333331` | `platform@prevenia.com` | `PLATFORM_ADMIN` | `Admin1234!` |
-| **Admin Org A** | `33333333-3333-3333-3333-333333333332` | `admin@demo.com` | `CONSULTANT_ADMIN` (Org A) | `Demo1234!` |
-| **Técnico Carlos** | `33333333-3333-3333-3333-333333333333` | `carlos@demo.com` | `TECHNICIAN` (Asignado a Macro y Andreani) | `Demo1234!` |
-| **Técnico Martín** | `33333333-3333-3333-3333-333333333334` | `martin@demo.com` | `TECHNICIAN` (Asignado a Coca-Cola) | `Demo1234!` |
-| **Cliente Macro** | `33333333-3333-3333-3333-333333333335` | `macro@demo.com` | `CLIENT` (Asociado a Banco Macro) | `Demo1234!` |
-| **Admin Org B** | `33333333-3333-3333-3333-333333333336` | `admin.b@demo.com` | `CONSULTANT_ADMIN` (Org B) | `Demo1234!` |
+## 4. Tipos de Datos y Manejo Temporal
+* **Fechas de Negocio / Calendario**: `DATE` (`java.time.LocalDate`) para `expiration_date` e `issue_date`. No requieren componente horario ni zona horaria.
+* **Auditoría y Eventos**: `TIMESTAMPTZ` (`java.time.OffsetDateTime` UTC) para `created_at`, `updated_at`, `completed_at`, `cancelled_at`.
