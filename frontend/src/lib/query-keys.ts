@@ -26,4 +26,13 @@ export const queryKeys = {
       [...queryKeys.expirations.all, 'expired', companyId] as const,
     categories: () => [...queryKeys.expirations.all, 'categories'] as const,
   },
+  alerts: {
+    all: ['alerts'] as const,
+    list: (companyId?: string, priority?: string) =>
+      [...queryKeys.alerts.all, 'list', { companyId, priority }] as const,
+  },
+  users: {
+    all: ['users'] as const,
+    technicians: () => [...queryKeys.users.all, 'technicians'] as const,
+  },
 };

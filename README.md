@@ -14,21 +14,21 @@
 
 ---
 
-## 🏛️ Arquitectura del Sistema (Día 4 — UI Profesional)
+## 🏛️ Arquitectura del Sistema (Día 5 — Calendario y Experiencia Operativa)
 
-PREVENIA adopta una arquitectura de **Modular Monolith** (Monolito Modular) orientada al dominio en el backend, con **Spring Security + JWT**, aislamiento multi-tenant estricto por `organization_id`, motor de clasificación temporal desacoplado mediante `java.time.Clock` inyectable y una aplicación web moderna en **Next.js 15 (App Router)** con **TanStack Query v5**:
+PREVENIA adopta una arquitectura de **Modular Monolith** orientada al dominio en el backend, con **Spring Security + JWT**, aislamiento multi-tenant estricto por `organization_id`, motor de clasificación temporal desacoplado mediante `java.time.Clock` inyectable, Centro de Alertas priorizadas y una aplicación web moderna en **Next.js 15 (App Router)** con **TanStack Query v5**:
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │             Navegador / Cliente Web                    │
-│      (Next.js 15 + TanStack Query + UI Profesional)    │
+│      (Next.js 15 + TanStack Query + Calendario & UI)   │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │   /login     │  │  /dashboard  │  │  /companies  │  │
-│  │ (Auth Guard) │  │  (KPIs/Top)  │  │(CRUD/Search) │  │
+│  │   /login     │  │  /dashboard  │  │   /alerts    │  │
+│  │ (Auth Guard) │  │  (KPIs/Top)  │  │(Priorizadas) │  │
 │  └──────────────┘  └──────────────┘  └──────────────┘  │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ /expirations │  │ /comp/[id]   │  │ /exp/[id]    │  │
-│  │  (Filtros)   │  │ (Métricas)   │  │ (Lifecycle)  │  │
+│  │ /companies   │  │ /comp/[id]   │  │ /expirations │  │
+│  │(CRUD/Search) │  │ (Métricas)   │  │(List/Calendar│  │
 │  └──────────────┘  └──────────────┘  └──────────────┘  │
 └───────────────────────────┬────────────────────────────┘
                             │ HTTP / REST / Authorization: Bearer <JWT>
@@ -42,12 +42,12 @@ PREVENIA adopta una arquitectura de **Modular Monolith** (Monolito Modular) orie
 │  └──────────────┘  └──────────────┘  └──────────────┘  │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │   company    │  │  assignment  │  │  expiration  │  │
-│  │ (Anti-IDOR)  │  │(Tech-Company)│  │ (Core Día 3) │  │
+│  │ (Anti-IDOR)  │  │(Tech-Company)│  │ (Core D3/D5) │  │
 │  └──────────────┘  └──────────────┘  └──────────────┘  │
-│  ┌──────────────┐  ┌────────────────────────────────┐  │
-│  │  dashboard   │  │  ExpirationDeadlineClassifier  │  │
-│  │  (Aggregates)│  │  + TimeConfig Injectable Clock │  │
-│  └──────────────┘  └────────────────────────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │  dashboard   │  │    alert     │  │  Classifier  │  │
+│  │  (Aggregates)│  │ (Priorities) │  │(InjectableCK)│  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
 └───────────────────────────┬────────────────────────────┘
                             │ JPA / Hibernate / Flyway (V1, V2, V3)
                             ▼
@@ -58,23 +58,24 @@ PREVENIA adopta una arquitectura de **Modular Monolith** (Monolito Modular) orie
 ```
 
 Documentación técnica complementaria:
-* 📘 [docs/frontend.md](file:///docs/frontend.md) — Arquitectura frontend, design tokens, responsive breakpoints y query keys.
+* 📘 [docs/frontend.md](file:///docs/frontend.md) — Arquitectura frontend, URL state, vista dual Lista/Calendario, Centro de Alertas y diseño responsive.
 * 📘 [docs/architecture.md](file:///docs/architecture.md) — Filosofía arquitectónica, motor de especificaciones JPA y aislamiento multi-tenant.
 * 📗 [docs/domain-model.md](file:///docs/domain-model.md) — Modelo de dominio, ciclo de vida, clasificación temporal y matriz de permisos.
 * 📙 [docs/database.md](file:///docs/database.md) — Diccionario de datos, migración V3, índices de alto rendimiento y constraints.
 
 ---
 
-## 🖥️ Módulos y Pantallas de la Aplicación Web (Día 4)
+## 🖥️ Módulos y Pantallas de la Aplicación Web (Día 5)
 
 | Ruta | Roles Autorizados | Funcionalidades Principales |
 |---|---|---|
 | `/login` | Público | Autenticación JWT con validación de credenciales, demo switcher de roles y redirección con `returnUrl`. |
 | `/dashboard` | Todos | Resumen ejecutivo con 4 StatCards (Empresas, Vencidos, Próximos 7d, Próximos 30d), listado Top 10 próximos vencimientos y acciones rápidas de completar/cancelar. |
+| `/alerts` | Todos | **Centro de Alertas Operativas** con segmentación por urgencia (`CRITICAL` vencidos, `HIGH` 0-7d, `MEDIUM` 8-30d), tarjetas enriquecidas y resolución directa. |
 | `/companies` | Todos | Directorio de clientes con buscador server-side (`search`), paginación, métricas por empresa y visualización dual Desktop/Mobile Cards. |
 | `/companies/new` | `PLATFORM_ADMIN`, `CONSULTANT_ADMIN` | Formulario de alta con validación de CUIT, razón social, datos de contacto y feedback toast. |
 | `/companies/[id]` | Todos (filtrado) | Cabecera ejecutiva, resumen de métricas, tabs (Resumen / Vencimientos) y listado filtrado con creación directa (`/expirations/new?companyId=...`). |
-| `/expirations` | Todos (filtrado) | Tabla maestra de vencimientos con filtros por empresa, estado de ciclo de vida (`ACTIVE`, `COMPLETED`, `CANCELLED`) y estado temporal (`EXPIRED`, `URGENT`, `UPCOMING`, `CURRENT`). |
+| `/expirations` | Todos (filtrado) | **Vista Dual: [ Lista ] y [ Calendario Mensual ]** sincronizada con URL (`?view=list\|calendar`). Barra de filtros combinada (Empresa, Categoría, Estado, Fechas con atajos, Técnico, Búsqueda debounced). |
 | `/expirations/new` | Admins y Técnicos | Alta de vencimientos con selectores dinámicos de empresa y categoría, date picker y validación client/server. |
 | `/expirations/[id]` | Todos (filtrado) | Ficha técnica de obligación, auditoría de creación y última actualización, y modales de completar/cancelar con notas. |
 | `/expirations/[id]/edit` | Admins y Técnicos | Edición de título, categoría, fechas y notas, preservando inmutabilidad de la empresa para evitar fuga IDOR. |
@@ -129,6 +130,8 @@ docker compose up --build -d
 
 Acceder a:
 * **Aplicación Web**: [http://localhost:3000](http://localhost:3000)
+* **Vencimientos Dual (Lista / Calendario)**: [http://localhost:3000/expirations](http://localhost:3000/expirations)
+* **Centro de Alertas**: [http://localhost:3000/alerts](http://localhost:3000/alerts)
 * **API REST Backend**: [http://localhost:8080/api/v1](http://localhost:8080/api/v1)
 
 ### 3. Opción B — Desarrollo Local Híbrido
@@ -158,7 +161,7 @@ npm run dev
 
 ## 🧪 Ejecución de Tests Automatizados
 
-### Backend (68 Tests de Integración Multi-Tenant, Dashboard y Dominio)
+### Backend (73 Tests de Integración Multi-Tenant, Alertas, Dashboard y Dominio)
 ```bash
 cd backend
 # Windows:

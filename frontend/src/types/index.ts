@@ -215,6 +215,43 @@ export interface HealthStatus {
   };
 }
 
+export interface AlertItem {
+  expirationId: string;
+  companyId: string;
+  companyName: string;
+  categoryId: string;
+  categoryName: string;
+  title: string;
+  description?: string;
+  expirationDate: string;
+  deadlineStatus?: ExpirationDeadlineStatus | null;
+  daysUntilExpiration?: number | null;
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  responsibleUserId?: string | null;
+  responsibleUserName?: string | null;
+}
+
+export interface AlertsSummary {
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  totalCount: number;
+  alerts: AlertItem[];
+}
+
+export interface User {
+  id: string;
+  organizationId?: string | null;
+  companyId?: string | null;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: UserRole;
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ApiError {
   timestamp: string;
   status: number;

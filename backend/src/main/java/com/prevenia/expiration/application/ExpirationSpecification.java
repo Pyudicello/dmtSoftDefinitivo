@@ -77,7 +77,10 @@ public class ExpirationSpecification {
 
                 if (filters.getSearch() != null && !filters.getSearch().trim().isEmpty()) {
                     String pattern = "%" + filters.getSearch().trim().toLowerCase() + "%";
-                    predicates.add(cb.like(cb.lower(root.get("title")), pattern));
+                    predicates.add(cb.or(
+                            cb.like(cb.lower(root.get("title")), pattern),
+                            cb.like(cb.lower(cb.coalesce(root.get("description"), "")), pattern)
+                    ));
                 }
 
                 if (filters.getDeadlineStatus() != null && today != null && properties != null) {

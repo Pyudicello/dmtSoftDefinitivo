@@ -79,6 +79,7 @@ function DashboardContent() {
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.expirations.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
     },
     onError: (err: any) => {
       setActionError(err?.errorBody?.message || err?.message || 'Error al completar el vencimiento');
@@ -95,6 +96,7 @@ function DashboardContent() {
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.expirations.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
     },
     onError: (err: any) => {
       setActionError(err?.errorBody?.message || err?.message || 'Error al cancelar el vencimiento');

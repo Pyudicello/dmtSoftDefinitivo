@@ -98,14 +98,21 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UserResponse> listUsers(Pageable pageable, AuthenticatedUser caller) {
-        log.debug("Listing users requested by {}", caller.getEmail());
+    public Page<UserResponse> listUsers(UserRole role, Pageable pageable, AuthenticatedUser caller) {
+        log.debug("Listing users [role={}] requested by {}", role, caller.getEmail());
 
         if (caller.isPlatformAdmin()) {
+            if (role != null) {
+                return userRepository.findAllByRole(role, pageable).map(UserResponse::fromEntity);
+            }
             return userRepository.findAll(pageable).map(UserResponse::fromEntity);
         }
 
         if (caller.isConsultantAdmin()) {
+            if (role != null) {
+                return userRepository.findAllByOrganizationIdAndRole(caller.getOrganizationId(), role, pageable)
+                        .map(UserResponse::fromEntity);
+            }
             return userRepository.findAllByOrganizationId(caller.getOrganizationId(), pageable)
                     .map(UserResponse::fromEntity);
         }

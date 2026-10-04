@@ -4,6 +4,9 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query-keys';
+import { alertService } from '@/services/alert.service';
 import {
   Shield,
   LayoutDashboard,
@@ -13,7 +16,8 @@ import {
   X,
   ChevronRight,
   User,
-  Activity
+  Activity,
+  AlertTriangle
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -46,12 +50,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         icon: <Clock size={18} />,
         match: (path: string) => path.startsWith('/expirations'),
       },
+      {
+        label: 'Centro de Alertas',
+        href: '/alerts',
+        icon: <Activity size={18} />,
+        match: (path: string) => path.startsWith('/alerts'),
+      },
     ];
 
     return items;
   };
 
   const navItems = getNavItems();
+
+  const { data: alertsData } = useQuery({
+    queryKey: queryKeys.alerts.list(),
+    queryFn: () => alertService.getAlerts(),
+    enabled: !!user,
+  });
+
+  const activeAlertsCount = alertsData?.totalCount ?? 0;
+  const criticalCount = alertsData?.criticalCount ?? 0;
 
   const getRoleBadgeStyle = (r: string | null) => {
     switch (r) {
@@ -156,6 +175,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             {navItems.map((item) => {
               const active = item.match(pathname);
+              const isAlerts = item.href === '/alerts';
               return (
                 <Link
                   key={item.href}
@@ -181,7 +201,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <span style={{ color: active ? '#38bdf8' : 'var(--text-muted)' }}>{item.icon}</span>
                     <span>{item.label}</span>
                   </div>
-                  {active && <ChevronRight size={14} color="#38bdf8" />}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    {isAlerts && activeAlertsCount > 0 && (
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '0.1rem 0.45rem',
+                          borderRadius: '9999px',
+                          background: criticalCount > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(249, 115, 22, 0.2)',
+                          color: criticalCount > 0 ? '#f87171' : '#fb923c',
+                          border: `1px solid ${criticalCount > 0 ? 'rgba(239, 68, 68, 0.4)' : 'rgba(249, 115, 22, 0.4)'}`,
+                        }}
+                      >
+                        {activeAlertsCount}
+                      </span>
+                    )}
+                    {active && <ChevronRight size={14} color="#38bdf8" />}
+                  </div>
                 </Link>
               );
             })}

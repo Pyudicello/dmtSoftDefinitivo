@@ -2,14 +2,24 @@
 
 import React from 'react';
 
-export function CardSkeleton() {
+export function CardSkeleton({ count = 1 }: { count?: number }) {
+  if (count > 1) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        {Array.from({ length: count }).map((_, i) => (
+          <CardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div
       className="card"
       style={{
         padding: '1.25rem',
         animation: 'pulse 1.5s infinite',
-        minHeight: '120px',
+        minHeight: '100px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -19,7 +29,7 @@ export function CardSkeleton() {
         <div style={{ width: '40%', height: '14px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px' }} />
         <div style={{ width: '28px', height: '28px', background: 'rgba(255,255,255,0.06)', borderRadius: '6px' }} />
       </div>
-      <div style={{ width: '50%', height: '32px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', margin: '0.75rem 0 0.25rem' }} />
+      <div style={{ width: '50%', height: '28px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', margin: '0.75rem 0 0.25rem' }} />
       <div style={{ width: '70%', height: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: '4px' }} />
     </div>
   );

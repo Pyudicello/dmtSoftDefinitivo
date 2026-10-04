@@ -8,6 +8,8 @@ interface EmptyStateProps {
   description?: string;
   icon?: React.ReactNode;
   action?: React.ReactNode;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 export function EmptyState({
@@ -15,6 +17,8 @@ export function EmptyState({
   description,
   icon,
   action,
+  actionLabel,
+  onAction,
 }: EmptyStateProps) {
   return (
     <div
@@ -50,12 +54,23 @@ export function EmptyState({
       </h3>
 
       {description && (
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', maxWidth: '420px', lineHeight: 1.5, marginBottom: action ? '1.5rem' : 0 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', maxWidth: '440px', lineHeight: 1.5, marginBottom: action || actionLabel ? '1.5rem' : 0 }}>
           {description}
         </p>
       )}
 
       {action && <div>{action}</div>}
+
+      {!action && actionLabel && onAction && (
+        <button
+          type="button"
+          onClick={onAction}
+          className="btn btn-primary"
+          style={{ fontSize: '0.85rem' }}
+        >
+          {actionLabel}
+        </button>
+      )}
     </div>
   );
 }

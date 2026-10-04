@@ -1,8 +1,12 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { Menu, Shield, LogOut } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query-keys';
+import { alertService } from '@/services/alert.service';
+import { Menu, Shield, LogOut, Bell } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSidebar: () => void;
@@ -10,6 +14,15 @@ interface HeaderProps {
 
 export function Header({ onOpenSidebar }: HeaderProps) {
   const { user, role, logout } = useAuth();
+
+  const { data: alertsData } = useQuery({
+    queryKey: queryKeys.alerts.list(),
+    queryFn: () => alertService.getAlerts(),
+    enabled: !!user,
+  });
+
+  const activeAlertsCount = alertsData?.totalCount ?? 0;
+  const criticalCount = alertsData?.criticalCount ?? 0;
 
   const getRoleBadgeStyle = (r: string | null) => {
     switch (r) {
@@ -73,6 +86,49 @@ export function Header({ onOpenSidebar }: HeaderProps) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {user && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {/* Alert Center Link */}
+            <Link
+              href="/alerts"
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.5rem',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid var(--border-color)',
+                color: activeAlertsCount > 0 ? '#38bdf8' : 'var(--text-secondary)',
+                textDecoration: 'none',
+              }}
+              title={`${activeAlertsCount} alertas activas`}
+            >
+              <Bell size={18} />
+              {activeAlertsCount > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-4px',
+                    minWidth: '18px',
+                    height: '18px',
+                    padding: '0 4px',
+                    borderRadius: '9999px',
+                    background: criticalCount > 0 ? '#ef4444' : '#f97316',
+                    color: '#ffffff',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 0 8px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  {activeAlertsCount > 99 ? '99+' : activeAlertsCount}
+                </span>
+              )}
+            </Link>
+
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.8rem' }} className="hidden sm:flex">
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                 {user.firstName} {user.lastName}

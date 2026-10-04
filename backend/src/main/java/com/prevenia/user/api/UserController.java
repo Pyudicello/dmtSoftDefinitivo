@@ -42,11 +42,12 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'CONSULTANT_ADMIN')")
     public ResponseEntity<Page<UserResponse>> listUsers(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) com.prevenia.user.domain.UserRole role,
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal AuthenticatedUser caller
     ) {
-        log.debug("GET /api/v1/users requested by {}", caller.getEmail());
-        Page<UserResponse> response = userService.listUsers(pageable, caller);
+        log.debug("GET /api/v1/users requested by {} with role filter: {}", caller.getEmail(), role);
+        Page<UserResponse> response = userService.listUsers(role, pageable, caller);
         return ResponseEntity.ok(response);
     }
 }

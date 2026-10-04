@@ -8,9 +8,12 @@ interface ConfirmDialogProps {
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  description: string;
+  description: React.ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
   confirmText?: string;
   cancelText?: string;
+  variant?: 'primary' | 'danger' | 'warning';
   isDestructive?: boolean;
   isLoading?: boolean;
 }
@@ -21,19 +24,26 @@ export function ConfirmDialog({
   onConfirm,
   title,
   description,
+  confirmLabel,
+  cancelLabel,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
+  variant,
   isDestructive = false,
   isLoading = false,
 }: ConfirmDialogProps) {
   if (!isOpen) return null;
 
+  const isDanger = isDestructive || variant === 'danger';
+  const finalConfirmLabel = confirmLabel || confirmText;
+  const finalCancelLabel = cancelLabel || cancelText;
+
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '460px' }}>
+      <div className="modal-content" style={{ maxWidth: '480px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            {isDestructive && (
+            {isDanger && (
               <div style={{ padding: '0.4rem', borderRadius: '8px', background: 'rgba(244, 63, 94, 0.15)', color: '#fb7185' }}>
                 <AlertTriangle size={18} />
               </div>
@@ -51,9 +61,9 @@ export function ConfirmDialog({
           </button>
         </div>
 
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
           {description}
-        </p>
+        </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
           <button
@@ -62,7 +72,7 @@ export function ConfirmDialog({
             disabled={isLoading}
             className="btn-refresh"
           >
-            {cancelText}
+            {finalCancelLabel}
           </button>
           <button
             type="button"
@@ -70,13 +80,13 @@ export function ConfirmDialog({
             disabled={isLoading}
             className="btn-refresh"
             style={{
-              background: isDestructive ? 'rgba(244, 63, 94, 0.25)' : 'rgba(59, 130, 246, 0.25)',
-              borderColor: isDestructive ? 'rgba(244, 63, 94, 0.45)' : 'rgba(59, 130, 246, 0.45)',
-              color: isDestructive ? '#fb7185' : '#93c5fd',
+              background: isDanger ? 'rgba(244, 63, 94, 0.25)' : 'rgba(59, 130, 246, 0.25)',
+              borderColor: isDanger ? 'rgba(244, 63, 94, 0.45)' : 'rgba(59, 130, 246, 0.45)',
+              color: isDanger ? '#fb7185' : '#93c5fd',
               fontWeight: 700,
             }}
           >
-            {isLoading ? 'Procesando...' : confirmText}
+            {isLoading ? 'Procesando...' : finalConfirmLabel}
           </button>
         </div>
       </div>
