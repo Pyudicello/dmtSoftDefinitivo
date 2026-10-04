@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
-import { Navbar } from '@/components/layout/Navbar';
+import { QueryProvider } from '@/context/QueryProvider';
+import { ToastProvider } from '@/context/ToastContext';
 
 export const metadata: Metadata = {
   title: 'PREVENIA — Plataforma SaaS de Higiene y Seguridad Laboral',
@@ -16,12 +17,13 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <AuthProvider>
-          <div className="container">
-            <Navbar />
-            {children}
-          </div>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

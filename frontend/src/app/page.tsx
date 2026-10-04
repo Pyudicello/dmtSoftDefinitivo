@@ -1,24 +1,68 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { SystemStatusCard } from '@/features/system/components/SystemStatusCard';
-import { Shield, Users, Building2, Lock, ArrowRight, ShieldCheck, CheckCircle2, Clock, AlertTriangle, CheckCircle, Tag } from 'lucide-react';
+import {
+  Shield,
+  Users,
+  Building2,
+  Lock,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  LayoutDashboard,
+  LogIn
+} from 'lucide-react';
 
 export default function HomePage() {
-  const { user, role, isAuthenticated, quickLoginAs } = useAuth();
+  const { user, role, isAuthenticated, quickLoginAs, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   return (
-    <main>
-      <section className="hero">
-        <div className="hero-subtitle">Plataforma SaaS • Higiene & Seguridad Laboral</div>
-        <h1>PREVENIA — Día 3: Core de Vencimientos</h1>
-        <p>
-          Motor comercial y de cumplimiento técnico para consultoras de Higiene y Seguridad.
-          Gestión integral de obligaciones periódicas, ciclo de vida administrativo (<code>ACTIVE</code>, <code>COMPLETED</code>, <code>CANCELLED</code>),
-          clasificación temporal dinámica (<code>URGENT</code>, <code>UPCOMING</code>, <code>CURRENT</code>, <code>EXPIRED</code>) y aislamiento multi-tenant estricto.
+    <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+      <section className="hero" style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+        <div className="hero-subtitle" style={{ display: 'inline-block', marginBottom: '0.75rem' }}>
+          Plataforma SaaS • Higiene & Seguridad Laboral
+        </div>
+        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+          PREVENIA
+        </h1>
+        <p style={{ maxWidth: '700px', margin: '0 auto 1.5rem', color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: 1.6 }}>
+          Gestión integral de vencimientos, auditoría de obligaciones técnicas y control de clientes para consultoras de Higiene y Seguridad.
         </p>
+
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link
+            href="/login"
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+          >
+            <LogIn size={18} />
+            <span>Ingresar a PREVENIA</span>
+            <ArrowRight size={18} />
+          </Link>
+          {isAuthenticated && (
+            <Link
+              href="/dashboard"
+              className="btn btn-secondary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+            >
+              <LayoutDashboard size={18} />
+              <span>Ir al Dashboard</span>
+            </Link>
+          )}
+        </div>
       </section>
 
       {/* Role Testing Quick Matrix */}
@@ -26,7 +70,7 @@ export default function HomePage() {
         <div className="card-header">
           <div className="card-title">
             <Lock size={20} color="#38bdf8" />
-            <span>Matriz de Testing de Roles y Visibilidad de Vencimientos</span>
+            <span>Acceso Rápido por Rol (Demostración y Testing)</span>
           </div>
           {isAuthenticated && user && (
             <span className="status-badge status-up">
@@ -36,166 +80,132 @@ export default function HomePage() {
         </div>
 
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '1.25rem' }}>
-          Alterná entre identidades con un solo click para verificar las políticas de autorización sobre empresas y vencimientos:
+          Hacé click en cualquiera de los roles para autenticarte instantáneamente y acceder al Dashboard con su ámbito de autorización:
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
           <div style={{ padding: '1rem', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '8px' }}>
             <div style={{ fontWeight: 700, color: '#93c5fd', fontSize: '0.9rem' }}>1. Consultor Admin A</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-              Ve todos los vencimientos de Org A (Macro, Andreani, Coca-Cola). CRUD completo y gestión de categorías.
+              Scope completo de Consultora A (Macro, Andreani, Coca-Cola). CRUD de empresas y vencimientos.
             </div>
             <button
-              onClick={() => quickLoginAs('admin@demo.com', 'Demo1234!')}
+              onClick={async () => {
+                await quickLoginAs('admin@demo.com', 'Demo1234!');
+                router.push('/dashboard');
+              }}
               className="btn-refresh"
               style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem' }}
             >
-              <span>Activar: admin@demo.com</span>
+              <span>Ingresar como Admin A</span>
             </button>
           </div>
 
           <div style={{ padding: '1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '8px' }}>
             <div style={{ fontWeight: 700, color: '#fcd34d', fontSize: '0.9rem' }}>2. Técnico Carlos</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-              Ve y opera solo en sus empresas asignadas (Macro, Andreani). Bloqueo IDOR 404 para Coca-Cola.
+              Opera solo en empresas asignadas (Macro, Andreani). Protección anti-IDOR 404 para Coca-Cola.
             </div>
             <button
-              onClick={() => quickLoginAs('carlos@demo.com', 'Demo1234!')}
+              onClick={async () => {
+                await quickLoginAs('carlos@demo.com', 'Demo1234!');
+                router.push('/dashboard');
+              }}
               className="btn-refresh"
               style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(245, 158, 11, 0.3)', color: '#fcd34d' }}
             >
-              <span>Activar: carlos@demo.com</span>
+              <span>Ingresar como Técnico</span>
             </button>
           </div>
 
           <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px' }}>
             <div style={{ fontWeight: 700, color: '#6ee7b7', fontSize: '0.9rem' }}>3. Cliente Macro</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-              Solo lectura de vencimientos de Banco Macro. Bloqueo 403 en creación/edición e IDOR 404 en otras empresas.
+              Solo lectura de su empresa Banco Macro. Acciones de creación/edición bloqueadas.
             </div>
             <button
-              onClick={() => quickLoginAs('macro@demo.com', 'Demo1234!')}
+              onClick={async () => {
+                await quickLoginAs('macro@demo.com', 'Demo1234!');
+                router.push('/dashboard');
+              }}
               className="btn-refresh"
               style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(16, 185, 129, 0.3)', color: '#6ee7b7' }}
             >
-              <span>Activar: macro@demo.com</span>
+              <span>Ingresar como Cliente</span>
             </button>
           </div>
 
           <div style={{ padding: '1rem', background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.2)', borderRadius: '8px' }}>
             <div style={{ fontWeight: 700, color: '#f472b6', fontSize: '0.9rem' }}>4. Admin Org B (Cross-Tenant)</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-              Consultora B. Aislamiento estricto: no puede ver ni consultar vencimientos de las empresas de Org A.
+              Consultora B. Aislamiento estricto: no puede ver ni consultar datos de la Consultora A.
             </div>
             <button
-              onClick={() => quickLoginAs('admin.b@demo.com', 'Demo1234!')}
+              onClick={async () => {
+                await quickLoginAs('admin.b@demo.com', 'Demo1234!');
+                router.push('/dashboard');
+              }}
               className="btn-refresh"
               style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(236, 72, 153, 0.3)', color: '#f472b6' }}
             >
-              <span>Activar: admin.b@demo.com</span>
+              <span>Ingresar como Org B</span>
             </button>
           </div>
         </div>
-
-        <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Link href="/companies" className="btn-refresh" style={{ textDecoration: 'none' }}>
-            <Building2 size={14} />
-            <span>Empresas</span>
-          </Link>
-          <Link href="/expirations" className="btn-refresh" style={{ textDecoration: 'none', background: 'rgba(59, 130, 246, 0.25)', color: '#ffffff' }}>
-            <Clock size={14} />
-            <span>Ver Vencimientos Autorizados ({role || 'Anónimo'})</span>
-            <ArrowRight size={14} />
-          </Link>
-        </div>
       </div>
 
-      {/* Deadline Classification Rules Info */}
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <div className="card-header">
-          <div className="card-title">
-            <Clock size={20} color="#38bdf8" />
-            <span>Motor de Clasificación Temporal (Calculado al Vuelo vía Clock Inyectable)</span>
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-          <div style={{ padding: '0.85rem', background: 'rgba(244, 63, 94, 0.08)', border: '1px solid rgba(244, 63, 94, 0.25)', borderRadius: '8px' }}>
-            <div style={{ color: '#fb7185', fontWeight: 700, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <AlertTriangle size={15} />
-              <span>VENCIDO (EXPIRED)</span>
-            </div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              <code>expirationDate &lt; hoy</code>.<br />Obligación atrasada que requiere atención inmediata.
-            </div>
-          </div>
-
-          <div style={{ padding: '0.85rem', background: 'rgba(249, 115, 22, 0.08)', border: '1px solid rgba(249, 115, 22, 0.25)', borderRadius: '8px' }}>
-            <div style={{ color: '#fb923c', fontWeight: 700, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Clock size={15} />
-              <span>URGENTE (URGENT)</span>
-            </div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              <code>0 ≤ días ≤ 7</code>.<br />Vence hoy o en los próximos 7 días inclusive.
-            </div>
-          </div>
-
-          <div style={{ padding: '0.85rem', background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.25)', borderRadius: '8px' }}>
-            <div style={{ color: '#facc15', fontWeight: 700, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Clock size={15} />
-              <span>PRÓXIMO (UPCOMING)</span>
-            </div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              <code>8 ≤ días ≤ 30</code>.<br />Vencimiento en el horizonte mensual operativo.
-            </div>
-          </div>
-
-          <div style={{ padding: '0.85rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px' }}>
-            <div style={{ color: '#34d399', fontWeight: 700, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <CheckCircle size={15} />
-              <span>VIGENTE (CURRENT)</span>
-            </div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              <code>días &gt; 30</code>.<br />Obligación al día con margen holgado.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid">
-        <SystemStatusCard />
-
+      {/* Feature Highlights */}
+      <div className="grid" style={{ marginBottom: '2rem' }}>
         <div className="card">
           <div className="card-header">
             <div className="card-title">
               <ShieldCheck size={20} color="#34d399" />
-              <span>Garantías de Dominio & Seguridad (Día 3)</span>
+              <span>Arquitectura & Seguridad</span>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.84rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.86rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
               <CheckCircle2 size={16} color="#34d399" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-              <div><strong>Separación Lifecycle vs Deadline:</strong> Estado administrativo persistido; estado temporal calculado dinámicamente.</div>
+              <div><strong>Multi-tenancy Estricto:</strong> Aislamiento garantizado en backend vía JPA y TenantContext.</div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
               <CheckCircle2 size={16} color="#34d399" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-              <div><strong>Categorías Globales & Por Tenant:</strong> Seed de 10 categorías globales + extensibilidad por consultora.</div>
+              <div><strong>Autorización por Roles:</strong> Matriz PLATFORM_ADMIN, CONSULTANT_ADMIN, TECHNICIAN, CLIENT.</div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
               <CheckCircle2 size={16} color="#34d399" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-              <div><strong>Filtros JPA Specification:</strong> Predicados multi-tenant aplicados en base de datos sin filtrado en memoria.</div>
+              <div><strong>Prevención IDOR:</strong> Recursos no autorizados devuelven 404 Not Found para evitar enumeración.</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">
+              <Clock size={20} color="#38bdf8" />
+              <span>Motor de Vencimientos</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.86rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <CheckCircle2 size={16} color="#38bdf8" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
+              <div><strong>Clasificación Dinámica:</strong> EXPIRED, URGENT (≤7d), UPCOMING (8-30d), CURRENT (&gt;30d).</div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <CheckCircle2 size={16} color="#34d399" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-              <div><strong>62 Tests Automatizados:</strong> Cobertura de límites temporales, concurrencia optimista y matriz de permisos.</div>
+              <CheckCircle2 size={16} color="#38bdf8" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
+              <div><strong>Ciclo de Vida:</strong> ACTIVE, COMPLETED, CANCELLED con auditoría de usuario y timestamp.</div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <CheckCircle2 size={16} color="#38bdf8" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
+              <div><strong>TanStack Query Cache:</strong> Invalidaciones automáticas tras mutaciones para consistencia total.</div>
             </div>
           </div>
         </div>
       </div>
 
-      <footer style={{ marginTop: '3rem' }}>
-        <p>PREVENIA SaaS © 2026 • Día 3: Core de Vencimientos Completado • Listo para Día 4</p>
+      <footer style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+        <p>PREVENIA SaaS © 2026 • Plataforma Profesional de Higiene & Seguridad Laboral</p>
       </footer>
     </main>
   );
 }
-

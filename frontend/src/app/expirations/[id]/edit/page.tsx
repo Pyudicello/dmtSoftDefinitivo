@@ -1,24 +1,26 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { expirationService } from '@/services/expiration.service';
-import { Expiration, ExpirationCategory, UpdateExpirationPayload } from '@/types';
-import { Clock, ArrowLeft, Edit2, ShieldAlert, AlertCircle, Save } from 'lucide-react';
+import { queryKeys } from '@/lib/query-keys';
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { DetailSkeleton } from '@/components/ui/LoadingSkeleton';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Clock, ArrowLeft, Edit2, AlertCircle, Save, ShieldX } from 'lucide-react';
+import { UpdateExpirationPayload } from '@/types';
 
-export default function EditExpirationPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const expirationId = resolvedParams.id;
+function EditExpirationContent({ expirationId }: { expirationId: string }) {
   const router = useRouter();
+  const { user } = useAuth();
+  const toast = useToast();
+  const queryClient = useQueryClient();
 
-  const { user, role, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [categories, setCategories] = useState<ExpirationCategory[]>([]);
-  const [expiration, setExpiration] = useState<Expiration | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Form state
   const [categoryId, setCategoryId] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -26,98 +28,114 @@ export default function EditExpirationPage({ params }: { params: Promise<{ id: s
   const [expirationDate, setExpirationDate] = useState('');
   const [responsibleUserId, setResponsibleUserId] = useState('');
   const [notes, setNotes] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: expiration,
+    isLoading: expLoading,
+    isError: expError,
+    error: errObj,
+  } = useQuery({
+    queryKey: queryKeys.expirations.detail(expirationId),
+    queryFn: () => expirationService.getExpirationById(expirationId),
+  });
+
+  const { data: categories = [], isLoading: catLoading } = useQuery({
+    queryKey: queryKeys.expirations.categories(),
+    queryFn: () => expirationService.getCategories(),
+  });
 
   useEffect(() => {
-    if (isAuthenticated) {
-      Promise.all([
-        expirationService.getExpirationById(expirationId),
-        expirationService.getCategories()
-      ])
-        .then(([exp, catList]) => {
-          setExpiration(exp);
-          setCategories(catList || []);
-          setCategoryId(exp.category.id);
-          setTitle(exp.title);
-          setDescription(exp.description || '');
-          setIssueDate(exp.issueDate || '');
-          setExpirationDate(exp.expirationDate);
-          setResponsibleUserId(exp.responsible?.id || '');
-          setNotes(exp.notes || '');
-        })
-        .catch((err: any) => {
-          setError(err?.errorBody?.message || err?.message || 'Error al cargar el vencimiento');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+    if (expiration) {
+      setCategoryId(expiration.category.id);
+      setTitle(expiration.title);
+      setDescription(expiration.description || '');
+      setIssueDate(expiration.issueDate || '');
+      setExpirationDate(expiration.expirationDate);
+      setResponsibleUserId(expiration.responsible?.id || '');
+      setNotes(expiration.notes || '');
     }
-  }, [isAuthenticated, expirationId]);
+  }, [expiration]);
 
-  if (authLoading || loading) {
+  const updateMutation = useMutation({
+    mutationFn: (payload: UpdateExpirationPayload) =>
+      expirationService.updateExpiration(expirationId, payload),
+    onSuccess: (updated) => {
+      toast.success(`Vencimiento '${updated.title}' actualizado con éxito`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.expirations.detail(expirationId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.expirations.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
+      router.push(`/expirations/${expirationId}`);
+    },
+    onError: (err: any) => {
+      setFormError(err?.errorBody?.message || err?.message || 'Error al actualizar el vencimiento');
+    },
+  });
+
+  if (expError) {
+    const status = (errObj as any)?.status;
+    if (status === 404 || status === 403) {
+      return (
+        <div className="card" style={{ maxWidth: '650px', margin: '2rem auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+            <ShieldX size={48} color="#f43f5e" style={{ margin: '0 auto 1rem' }} />
+            <h2 style={{ color: '#fb7185' }}>Acceso Denegado (Protección Anti-IDOR)</h2>
+            <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.9rem' }}>
+              No tenés autorización para editar el vencimiento con ID:
+            </p>
+            <code style={{ display: 'inline-block', marginTop: '0.5rem', padding: '0.4rem 0.8rem', background: 'rgba(0,0,0,0.4)', borderRadius: '6px', color: '#fca5a5', fontSize: '0.8rem' }}>
+              {expirationId}
+            </code>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <Link href="/expirations" className="btn-refresh" style={{ textDecoration: 'none' }}>
+              <ArrowLeft size={14} />
+              <span>Volver a Vencimientos</span>
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-        <Clock size={24} className="animate-spin" color="#38bdf8" />
-        <p style={{ marginTop: '0.75rem', color: 'var(--text-secondary)' }}>Cargando datos para edición...</p>
+      <ErrorState
+        title="Error al cargar datos"
+        message="No se pudo obtener la información de la obligación para edición."
+      />
+    );
+  }
+
+  if (expLoading || catLoading || !expiration) {
+    return (
+      <div style={{ maxWidth: '780px', margin: '0 auto' }}>
+        <DetailSkeleton />
       </div>
     );
   }
 
-  if (role === 'CLIENT') {
-    return (
-      <div className="card" style={{ maxWidth: '600px', margin: '3rem auto', textAlign: 'center' }}>
-        <ShieldAlert size={48} color="#f43f5e" style={{ margin: '0 auto 1rem' }} />
-        <h2 style={{ color: '#fb7185' }}>Permiso Denegado</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: '0.75rem 0 1.5rem' }}>
-          Los clientes no tienen permisos de edición sobre los vencimientos.
-        </p>
-        <Link href="/expirations" className="btn-refresh" style={{ textDecoration: 'none', justifyContent: 'center' }}>
-          <ArrowLeft size={14} />
-          <span>Volver a Vencimientos</span>
-        </Link>
-      </div>
-    );
-  }
-
-  if (error || !expiration) {
-    return (
-      <div className="card" style={{ maxWidth: '600px', margin: '2rem auto', textAlign: 'center' }}>
-        <h3>Error al cargar</h3>
-        <p style={{ color: '#fda4af', margin: '0.5rem 0 1.5rem' }}>{error || 'No se pudo cargar la información'}</p>
-        <Link href="/expirations" className="btn-refresh" style={{ textDecoration: 'none', justifyContent: 'center' }}>
-          <ArrowLeft size={14} />
-          <span>Volver a Vencimientos</span>
-        </Link>
-      </div>
-    );
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setFormError(null);
 
     if (!categoryId) {
-      setError('Debés seleccionar una categoría');
+      setFormError('Debés seleccionar una categoría');
       return;
     }
     if (!title.trim()) {
-      setError('El título de la obligación es obligatorio');
+      setFormError('El título de la obligación es obligatorio');
       return;
     }
     if (!expirationDate) {
-      setError('La fecha de vencimiento es obligatoria');
+      setFormError('La fecha de vencimiento es obligatoria');
       return;
     }
     if (issueDate && expirationDate && issueDate > expirationDate) {
-      setError('La fecha de emisión no puede ser posterior a la fecha de vencimiento');
+      setFormError('La fecha de emisión no puede ser posterior a la fecha de vencimiento');
       return;
     }
 
-    setSubmitting(true);
-
-    const payload: UpdateExpirationPayload = {
+    updateMutation.mutate({
       categoryId,
       title: title.trim(),
       description: description.trim() || undefined,
@@ -125,43 +143,40 @@ export default function EditExpirationPage({ params }: { params: Promise<{ id: s
       expirationDate,
       responsibleUserId: responsibleUserId.trim() || undefined,
       notes: notes.trim() || undefined,
-    };
-
-    try {
-      await expirationService.updateExpiration(expirationId, payload);
-      router.push(`/expirations/${expirationId}`);
-    } catch (err: any) {
-      setError(err?.errorBody?.message || err?.message || 'Error al actualizar el vencimiento');
-      setSubmitting(false);
-    }
+    });
   };
 
   return (
-    <div style={{ maxWidth: '750px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <Link href={`/expirations/${expirationId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.85rem' }}>
-          <ArrowLeft size={14} />
-          <span>Volver al Detalle</span>
-        </Link>
-      </div>
+    <div style={{ maxWidth: '780px', margin: '0 auto' }}>
+      <PageHeader
+        title="Editar Vencimiento"
+        subtitle={`Empresa: ${expiration.company.businessName} (Inmutable por seguridad)`}
+        icon={<Edit2 size={24} />}
+        breadcrumbs={[
+          { label: 'Vencimientos', href: '/expirations' },
+          { label: expiration.title, href: `/expirations/${expirationId}` },
+          { label: 'Editar' },
+        ]}
+      />
 
       <div className="card">
-        <div className="card-header">
-          <div>
-            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Edit2 size={22} color="#38bdf8" />
-              <span>Editar Vencimiento</span>
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.2rem' }}>
-              Empresa: <strong>{expiration.company.businessName}</strong> (Inmutable por seguridad)
-            </p>
-          </div>
-        </div>
-
-        {error && (
-          <div style={{ padding: '0.85rem 1rem', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.3)', borderRadius: '8px', color: '#fda4af', fontSize: '0.85rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertCircle size={18} />
-            <span>{error}</span>
+        {formError && (
+          <div
+            style={{
+              padding: '0.85rem 1rem',
+              background: 'rgba(244, 63, 94, 0.1)',
+              border: '1px solid rgba(244, 63, 94, 0.3)',
+              borderRadius: '8px',
+              color: '#fda4af',
+              fontSize: '0.85rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>{formError}</span>
           </div>
         )}
 
@@ -204,9 +219,9 @@ export default function EditExpirationPage({ params }: { params: Promise<{ id: s
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
-              <label className="form-label">Fecha de Emisión / Inicio (Opcional)</label>
+              <label className="form-label">Fecha de Emisión / Inicio</label>
               <input
                 type="date"
                 className="form-input"
@@ -246,22 +261,45 @@ export default function EditExpirationPage({ params }: { params: Promise<{ id: s
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '1rem',
+              marginTop: '1.75rem',
+              borderTop: '1px solid var(--border-color)',
+              paddingTop: '1.25rem',
+            }}
+          >
             <Link href={`/expirations/${expirationId}`} className="btn-refresh" style={{ textDecoration: 'none' }}>
               Cancelar
             </Link>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={updateMutation.isPending}
               className="btn-refresh"
-              style={{ background: 'rgba(59, 130, 246, 0.25)', borderColor: 'rgba(59, 130, 246, 0.4)', color: '#93c5fd', padding: '0.55rem 1.25rem' }}
+              style={{
+                background: 'rgba(59, 130, 246, 0.25)',
+                borderColor: 'rgba(59, 130, 246, 0.45)',
+                color: '#93c5fd',
+                padding: '0.55rem 1.25rem',
+              }}
             >
               <Save size={16} />
-              <span>{submitting ? 'Guardando Cambios...' : 'Guardar Cambios'}</span>
+              <span>{updateMutation.isPending ? 'Guardando...' : 'Guardar Cambios'}</span>
             </button>
           </div>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function EditExpirationPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  return (
+    <ProtectedRoute allowedRoles={['PLATFORM_ADMIN', 'CONSULTANT_ADMIN', 'TECHNICIAN']}>
+      <EditExpirationContent expirationId={resolvedParams.id} />
+    </ProtectedRoute>
   );
 }

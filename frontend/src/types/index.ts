@@ -174,6 +174,23 @@ export interface PageResponse<T> {
   last: boolean;
 }
 
+export interface DashboardSummary {
+  companyCount: number;
+  expiredCount: number;
+  next7DaysCount: number;
+  next30DaysCount: number;
+  completedCount: number;
+}
+
+export interface CompanyMetricsSummary {
+  company: Company;
+  expiredCount: number;
+  next7DaysCount: number;
+  next30DaysCount: number;
+  currentCount: number;
+  completedCount: number;
+}
+
 export interface SystemInfo {
   application: string;
   version: string;

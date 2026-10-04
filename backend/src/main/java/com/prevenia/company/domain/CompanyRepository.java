@@ -23,4 +23,6 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
     boolean existsByTaxIdAndOrganizationId(String taxId, UUID organizationId);
 
     boolean existsByIdAndOrganizationId(UUID id, UUID organizationId);
+
+    long countByOrganizationId(UUID organizationId);
 }

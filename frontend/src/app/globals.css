@@ -440,6 +440,73 @@ footer {
   box-shadow: var(--shadow-subtle);
 }
 
+/* Responsive Sidebar Layout */
+@media (min-width: 768px) {
+  .sidebar-container {
+    transform: translateX(0) !important;
+  }
+  .main-content-wrapper {
+    margin-left: 260px;
+  }
+  .md\:hidden {
+    display: none !important;
+  }
+  .md\:flex {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .sidebar-open {
+    transform: translateX(0);
+  }
+  .sidebar-closed {
+    transform: translateX(-100%);
+  }
+  .main-content-wrapper {
+    margin-left: 0 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .hidden.sm\:flex, .hidden.sm\:inline {
+    display: none !important;
+  }
+}
+
+@media (min-width: 641px) {
+  .hidden.sm\:flex {
+    display: flex !important;
+  }
+  .hidden.sm\:inline {
+    display: inline !important;
+  }
+}
+
+/* Tabs UI */
+.tab-button {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+}
+
+.tab-button:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-button.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+}
+
 @media (max-width: 768px) {
   .hero h1 {
     font-size: 2rem;

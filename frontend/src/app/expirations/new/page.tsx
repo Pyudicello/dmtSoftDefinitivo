@@ -1,24 +1,30 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { expirationService } from '@/services/expiration.service';
 import { companyService } from '@/services/company.service';
-import { Company, ExpirationCategory, CreateExpirationPayload } from '@/types';
-import { Clock, ArrowLeft, PlusCircle, ShieldAlert, CheckCircle2, AlertCircle } from 'lucide-react';
+import { queryKeys } from '@/lib/query-keys';
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Clock, ArrowLeft, PlusCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { CreateExpirationPayload } from '@/types';
 
-export default function NewExpirationPage() {
+function NewExpirationForm() {
   const router = useRouter();
-  const { user, role, isAuthenticated, isLoading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const preselectedCompanyId = searchParams.get('companyId') || '';
 
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [categories, setCategories] = useState<ExpirationCategory[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const { role } = useAuth();
+  const toast = useToast();
+  const queryClient = useQueryClient();
 
   // Form State
-  const [companyId, setCompanyId] = useState('');
+  const [companyId, setCompanyId] = useState(preselectedCompanyId);
   const [categoryId, setCategoryId] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -26,85 +32,69 @@ export default function NewExpirationPage() {
   const [expirationDate, setExpirationDate] = useState('');
   const [responsibleUserId, setResponsibleUserId] = useState('');
   const [notes, setNotes] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Queries
+  const { data: companiesData, isLoading: companiesLoading } = useQuery({
+    queryKey: queryKeys.companies.list(0, 100),
+    queryFn: () => companyService.getCompanies(0, 100),
+  });
+  const companies = React.useMemo(() => companiesData?.content || [], [companiesData]);
+
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: queryKeys.expirations.categories(),
+    queryFn: () => expirationService.getCategories(),
+  });
 
   useEffect(() => {
-    if (isAuthenticated) {
-      Promise.all([
-        companyService.getCompanies(),
-        expirationService.getCategories()
-      ])
-        .then(([compRes, catList]) => {
-          setCompanies(compRes.content || []);
-          setCategories(catList || []);
-          if (compRes.content?.length === 1) {
-            setCompanyId(compRes.content[0].id);
-          }
-        })
-        .catch((err) => {
-          setError('Error al cargar datos auxiliares para el formulario');
-        })
-        .finally(() => {
-          setLoadingData(false);
-        });
+    if (preselectedCompanyId) {
+      setCompanyId(preselectedCompanyId);
+    } else if (companies.length === 1 && !companyId) {
+      setCompanyId(companies[0].id);
     }
-  }, [isAuthenticated]);
+  }, [preselectedCompanyId, companies, companyId]);
 
-  if (authLoading || loadingData) {
-    return (
-      <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-        <Clock size={24} className="animate-spin" color="#38bdf8" />
-        <p style={{ marginTop: '0.75rem', color: 'var(--text-secondary)' }}>Cargando formulario...</p>
-      </div>
-    );
-  }
+  // Mutation
+  const createMutation = useMutation({
+    mutationFn: (payload: CreateExpirationPayload) => expirationService.createExpiration(payload),
+    onSuccess: (created) => {
+      toast.success(`Vencimiento '${created.title}' registrado con éxito`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.expirations.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
+      router.push(`/expirations/${created.id}`);
+    },
+    onError: (err: any) => {
+      setFormError(err?.errorBody?.message || err?.message || 'Error al registrar el vencimiento');
+    },
+  });
 
-  if (role === 'CLIENT') {
-    return (
-      <div className="card" style={{ maxWidth: '600px', margin: '3rem auto', textAlign: 'center' }}>
-        <ShieldAlert size={48} color="#f43f5e" style={{ margin: '0 auto 1rem' }} />
-        <h2 style={{ color: '#fb7185' }}>Permiso Denegado</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: '0.75rem 0 1.5rem' }}>
-          Los usuarios con rol <strong>CLIENT</strong> tienen acceso de solo lectura y no pueden crear nuevas obligaciones ni vencimientos.
-        </p>
-        <Link href="/expirations" className="btn-refresh" style={{ textDecoration: 'none', justifyContent: 'center' }}>
-          <ArrowLeft size={14} />
-          <span>Volver al listado de vencimientos</span>
-        </Link>
-      </div>
-    );
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setFormError(null);
 
     if (!companyId) {
-      setError('Debés seleccionar una empresa cliente');
+      setFormError('Debés seleccionar una empresa cliente');
       return;
     }
     if (!categoryId) {
-      setError('Debés seleccionar una categoría de vencimiento');
+      setFormError('Debés seleccionar una categoría');
       return;
     }
     if (!title.trim()) {
-      setError('El título de la obligación es obligatorio');
+      setFormError('El título de la obligación es obligatorio');
       return;
     }
     if (!expirationDate) {
-      setError('La fecha de vencimiento es obligatoria');
+      setFormError('La fecha de vencimiento es obligatoria');
       return;
     }
     if (issueDate && expirationDate && issueDate > expirationDate) {
-      setError('La fecha de emisión no puede ser posterior a la fecha de vencimiento');
+      setFormError('La fecha de emisión no puede ser posterior a la fecha de vencimiento');
       return;
     }
 
-    setSubmitting(true);
-
-    const payload: CreateExpirationPayload = {
+    createMutation.mutate({
       companyId,
       categoryId,
       title: title.trim(),
@@ -113,48 +103,53 @@ export default function NewExpirationPage() {
       expirationDate,
       responsibleUserId: responsibleUserId.trim() || undefined,
       notes: notes.trim() || undefined,
-    };
-
-    try {
-      const created = await expirationService.createExpiration(payload);
-      router.push(`/expirations/${created.id}`);
-    } catch (err: any) {
-      setError(err?.errorBody?.message || err?.message || 'Error al registrar el vencimiento');
-      setSubmitting(false);
-    }
+    });
   };
 
-  return (
-    <div style={{ maxWidth: '750px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <Link href="/expirations" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.85rem' }}>
-          <ArrowLeft size={14} />
-          <span>Volver a Vencimientos</span>
-        </Link>
+  if (companiesLoading || categoriesLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem 0' }}>
+        <RefreshCw size={24} className="animate-spin" color="#38bdf8" />
+        <p style={{ marginTop: '0.75rem', color: 'var(--text-secondary)' }}>Cargando formulario...</p>
       </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: '780px', margin: '0 auto' }}>
+      <PageHeader
+        title="Registrar Nuevo Vencimiento"
+        subtitle="Alta de obligación técnica, legal o reglamentaria."
+        icon={<Clock size={24} />}
+        breadcrumbs={[
+          { label: 'Vencimientos', href: '/expirations' },
+          { label: 'Nuevo Vencimiento' },
+        ]}
+      />
 
       <div className="card">
-        <div className="card-header">
-          <div>
-            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <PlusCircle size={24} color="#34d399" />
-              <span>Registrar Nuevo Vencimiento</span>
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.2rem' }}>
-              Alta de obligación o requisito técnico bajo el tenant actual.
-            </p>
-          </div>
-        </div>
-
-        {error && (
-          <div style={{ padding: '0.85rem 1rem', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.3)', borderRadius: '8px', color: '#fda4af', fontSize: '0.85rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertCircle size={18} />
-            <span>{error}</span>
+        {formError && (
+          <div
+            style={{
+              padding: '0.85rem 1rem',
+              background: 'rgba(244, 63, 94, 0.1)',
+              border: '1px solid rgba(244, 63, 94, 0.3)',
+              borderRadius: '8px',
+              color: '#fda4af',
+              fontSize: '0.85rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>{formError}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
               <label className="form-label">Empresa Cliente *</label>
               <select
@@ -207,15 +202,15 @@ export default function NewExpirationPage() {
             <label className="form-label">Descripción Detallada (Opcional)</label>
             <textarea
               className="form-textarea"
-              placeholder="Ej: Recarga anual correspondiente a los extintores ABC del establecimiento..."
+              placeholder="Ej: Recarga correspondiente a los extintores ABC de planta baja y subsuelo..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
             <div className="form-group">
-              <label className="form-label">Fecha de Emisión / Inicio (Opcional)</label>
+              <label className="form-label">Fecha de Emisión / Inspección Anterior</label>
               <input
                 type="date"
                 className="form-input"
@@ -260,22 +255,52 @@ export default function NewExpirationPage() {
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '1rem',
+              marginTop: '1.75rem',
+              borderTop: '1px solid var(--border-color)',
+              paddingTop: '1.25rem',
+            }}
+          >
             <Link href="/expirations" className="btn-refresh" style={{ textDecoration: 'none' }}>
               Cancelar
             </Link>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={createMutation.isPending}
               className="btn-refresh"
-              style={{ background: 'rgba(16, 185, 129, 0.25)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399', padding: '0.55rem 1.25rem' }}
+              style={{
+                background: 'rgba(16, 185, 129, 0.25)',
+                borderColor: 'rgba(16, 185, 129, 0.45)',
+                color: '#34d399',
+                padding: '0.55rem 1.25rem',
+              }}
             >
               <PlusCircle size={16} />
-              <span>{submitting ? 'Registrando...' : 'Crear Vencimiento'}</span>
+              <span>{createMutation.isPending ? 'Guardando...' : 'Crear Vencimiento'}</span>
             </button>
           </div>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function NewExpirationPage() {
+  return (
+    <ProtectedRoute allowedRoles={['PLATFORM_ADMIN', 'CONSULTANT_ADMIN', 'TECHNICIAN']}>
+      <Suspense
+        fallback={
+          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
+            <RefreshCw size={24} className="animate-spin" color="#38bdf8" />
+          </div>
+        }
+      >
+        <NewExpirationForm />
+      </Suspense>
+    </ProtectedRoute>
   );
 }

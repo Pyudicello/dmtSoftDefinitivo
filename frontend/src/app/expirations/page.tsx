@@ -1,131 +1,161 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { expirationService } from '@/services/expiration.service';
 import { companyService } from '@/services/company.service';
+import { queryKeys } from '@/lib/query-keys';
+import { formatDateSpanish } from '@/lib/date-utils';
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ExpirationStatusBadge } from '@/components/ui/ExpirationStatusBadge';
+import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 import {
   Expiration,
   ExpirationCategory,
   ExpirationFilterParams,
   ExpirationLifecycleStatus,
   ExpirationDeadlineStatus,
-  Company
+  Company,
 } from '@/types';
 import {
   Clock,
-  ShieldAlert,
-  ArrowRight,
-  RefreshCw,
   PlusCircle,
   Filter,
-  CheckCircle,
+  RefreshCw,
+  Eye,
+  Check,
+  X,
+  CheckCircle2,
   XCircle,
-  AlertTriangle,
   Calendar,
   Building2,
   Tag,
-  UserCheck,
-  Check,
-  X,
-  Eye,
-  Edit2
+  Search,
 } from 'lucide-react';
 
-export default function ExpirationsPage() {
-  const { user, role, isAuthenticated, isLoading: authLoading } = useAuth();
-
-  const [expirations, setExpirations] = useState<Expiration[]>([]);
-  const [categories, setCategories] = useState<ExpirationCategory[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [totalElements, setTotalElements] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function ExpirationsContent() {
+  const { user, role } = useAuth();
+  const toast = useToast();
+  const queryClient = useQueryClient();
 
   // Active view tab: 'all' | 'upcoming' | 'expired'
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'expired'>('all');
 
   // Filter state
+  const [page, setPage] = useState(0);
+  const pageSize = 15;
   const [filterCompanyId, setFilterCompanyId] = useState<string>('');
   const [filterCategoryId, setFilterCategoryId] = useState<string>('');
   const [filterLifecycleStatus, setFilterLifecycleStatus] = useState<string>('');
   const [filterDeadlineStatus, setFilterDeadlineStatus] = useState<string>('');
   const [filterFrom, setFilterFrom] = useState<string>('');
   const [filterTo, setFilterTo] = useState<string>('');
+  const [filterSearch, setFilterSearch] = useState<string>('');
 
   // Modals for Complete and Cancel actions
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [selectedExpiration, setSelectedExpiration] = useState<Expiration | null>(null);
+  const [selectedExp, setSelectedExp] = useState<Expiration | null>(null);
   const [actionNotes, setActionNotes] = useState('');
   const [actionDate, setActionDate] = useState('');
   const [actionReason, setActionReason] = useState('');
-  const [actionSubmitting, setActionSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Load companies & categories for filters
-  useEffect(() => {
-    if (isAuthenticated) {
-      expirationService.getCategories().then(setCategories).catch(() => {});
-      companyService.getCompanies().then((res) => setCompanies(res.content || [])).catch(() => {});
-    }
-  }, [isAuthenticated]);
+  // Queries for select dropdowns
+  const { data: categories = [] } = useQuery({
+    queryKey: queryKeys.expirations.categories(),
+    queryFn: () => expirationService.getCategories(),
+  });
 
-  const fetchExpirations = useCallback(async (page = 0) => {
-    if (!isAuthenticated) return;
-    setLoading(true);
-    setError(null);
+  const { data: companiesData } = useQuery({
+    queryKey: queryKeys.companies.list(0, 100),
+    queryFn: () => companyService.getCompanies(0, 100),
+  });
+  const companies = companiesData?.content || [];
 
-    try {
-      if (activeTab === 'upcoming') {
-        const data = await expirationService.getUpcomingExpirations(filterCompanyId || undefined);
-        setExpirations(data);
-        setTotalElements(data.length);
-        setTotalPages(1);
-        setCurrentPage(0);
-      } else if (activeTab === 'expired') {
-        const data = await expirationService.getExpiredExpirations(filterCompanyId || undefined);
-        setExpirations(data);
-        setTotalElements(data.length);
-        setTotalPages(1);
-        setCurrentPage(0);
-      } else {
-        const params: ExpirationFilterParams = {
-          page,
-          size: 15,
-          companyId: filterCompanyId || undefined,
-          categoryId: filterCategoryId || undefined,
-          lifecycleStatus: (filterLifecycleStatus as ExpirationLifecycleStatus) || undefined,
-          deadlineStatus: (filterDeadlineStatus as ExpirationDeadlineStatus) || undefined,
-          from: filterFrom || undefined,
-          to: filterTo || undefined,
-        };
-        const res = await expirationService.getExpirations(params);
-        setExpirations(res.content || []);
-        setTotalElements(res.totalElements);
-        setTotalPages(res.totalPages);
-        setCurrentPage(res.number);
-      }
-    } catch (err: any) {
-      setError(err?.errorBody?.message || err?.message || 'Error al cargar vencimientos');
-    } finally {
-      setLoading(false);
-    }
-  }, [isAuthenticated, activeTab, filterCompanyId, filterCategoryId, filterLifecycleStatus, filterDeadlineStatus, filterFrom, filterTo]);
-
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      fetchExpirations(0);
-    }
-  }, [authLoading, isAuthenticated, fetchExpirations]);
-
-  const handleTabChange = (tab: 'all' | 'upcoming' | 'expired') => {
-    setActiveTab(tab);
-    setCurrentPage(0);
+  // Expirations Query
+  const filterParams: ExpirationFilterParams = {
+    page,
+    size: pageSize,
+    companyId: filterCompanyId || undefined,
+    categoryId: filterCategoryId || undefined,
+    lifecycleStatus: (filterLifecycleStatus as ExpirationLifecycleStatus) || undefined,
+    deadlineStatus: (filterDeadlineStatus as ExpirationDeadlineStatus) || undefined,
+    from: filterFrom || undefined,
+    to: filterTo || undefined,
+    search: filterSearch || undefined,
   };
+
+  const {
+    data: expirationsData,
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery({
+    queryKey:
+      activeTab === 'upcoming'
+        ? queryKeys.expirations.upcoming(filterCompanyId || undefined)
+        : activeTab === 'expired'
+        ? queryKeys.expirations.expired(filterCompanyId || undefined)
+        : queryKeys.expirations.list(filterParams),
+    queryFn: async () => {
+      if (activeTab === 'upcoming') {
+        const list = await expirationService.getUpcomingExpirations(filterCompanyId || undefined);
+        return { content: list, totalElements: list.length, totalPages: 1, number: 0 };
+      }
+      if (activeTab === 'expired') {
+        const list = await expirationService.getExpiredExpirations(filterCompanyId || undefined);
+        return { content: list, totalElements: list.length, totalPages: 1, number: 0 };
+      }
+      return expirationService.getExpirations(filterParams);
+    },
+  });
+
+  const expirations = expirationsData?.content || [];
+  const totalElements = expirationsData?.totalElements || 0;
+  const totalPages = expirationsData?.totalPages || 0;
+
+  // Complete / Cancel Mutations
+  const completeMutation = useMutation({
+    mutationFn: ({ id, completedAt, notes }: { id: string; completedAt?: string; notes?: string }) =>
+      expirationService.completeExpiration(id, { completedAt, notes }),
+    onSuccess: () => {
+      toast.success('Vencimiento completado');
+      setCompleteModalOpen(false);
+      setSelectedExp(null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.expirations.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
+    },
+    onError: (err: any) => {
+      setActionError(err?.errorBody?.message || err?.message || 'Error al completar el vencimiento');
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      expirationService.cancelExpiration(id, { reason }),
+    onSuccess: () => {
+      toast.success('Vencimiento cancelado');
+      setCancelModalOpen(false);
+      setSelectedExp(null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.expirations.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
+    },
+    onError: (err: any) => {
+      setActionError(err?.errorBody?.message || err?.message || 'Error al cancelar el vencimiento');
+    },
+  });
+
+  const canCreate = role === 'PLATFORM_ADMIN' || role === 'CONSULTANT_ADMIN' || role === 'TECHNICIAN';
 
   const resetFilters = () => {
     setFilterCompanyId('');
@@ -134,233 +164,113 @@ export default function ExpirationsPage() {
     setFilterDeadlineStatus('');
     setFilterFrom('');
     setFilterTo('');
+    setFilterSearch('');
+    setPage(0);
   };
 
-  // Open Complete Modal
-  const openCompleteModal = (exp: Expiration) => {
-    setSelectedExpiration(exp);
+  const handleOpenComplete = (exp: Expiration) => {
+    setSelectedExp(exp);
     setActionNotes('');
     setActionDate('');
     setActionError(null);
     setCompleteModalOpen(true);
   };
 
-  // Open Cancel Modal
-  const openCancelModal = (exp: Expiration) => {
-    setSelectedExpiration(exp);
+  const handleOpenCancel = (exp: Expiration) => {
+    setSelectedExp(exp);
     setActionReason('');
     setActionError(null);
     setCancelModalOpen(true);
   };
 
-  // Submit Complete
-  const handleCompleteSubmit = async (e: React.FormEvent) => {
+  const handleCompleteSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedExpiration) return;
-    setActionSubmitting(true);
-    setActionError(null);
-    try {
-      await expirationService.completeExpiration(selectedExpiration.id, {
-        completedAt: actionDate || undefined,
-        notes: actionNotes || undefined,
-      });
-      setCompleteModalOpen(false);
-      setSelectedExpiration(null);
-      fetchExpirations(currentPage);
-    } catch (err: any) {
-      setActionError(err?.errorBody?.message || err?.message || 'Error al completar el vencimiento');
-    } finally {
-      setActionSubmitting(false);
-    }
+    if (!selectedExp) return;
+    completeMutation.mutate({
+      id: selectedExp.id,
+      completedAt: actionDate || undefined,
+      notes: actionNotes || undefined,
+    });
   };
 
-  // Submit Cancel
-  const handleCancelSubmit = async (e: React.FormEvent) => {
+  const handleCancelSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedExpiration) return;
-    setActionSubmitting(true);
-    setActionError(null);
-    try {
-      await expirationService.cancelExpiration(selectedExpiration.id, {
-        reason: actionReason || undefined,
-      });
-      setCancelModalOpen(false);
-      setSelectedExpiration(null);
-      fetchExpirations(currentPage);
-    } catch (err: any) {
-      setActionError(err?.errorBody?.message || err?.message || 'Error al cancelar el vencimiento');
-    } finally {
-      setActionSubmitting(false);
-    }
+    if (!selectedExp) return;
+    cancelMutation.mutate({
+      id: selectedExp.id,
+      reason: actionReason || undefined,
+    });
   };
-
-  const getDeadlineBadge = (exp: Expiration) => {
-    if (exp.lifecycleStatus === 'COMPLETED') {
-      return (
-        <span className="status-badge badge-lifecycle-completed" title="Vencimiento completado">
-          <Check size={12} />
-          <span>COMPLETADO</span>
-        </span>
-      );
-    }
-    if (exp.lifecycleStatus === 'CANCELLED') {
-      return (
-        <span className="status-badge badge-lifecycle-cancelled" title="Vencimiento cancelado">
-          <X size={12} />
-          <span>CANCELADO</span>
-        </span>
-      );
-    }
-
-    switch (exp.deadlineStatus) {
-      case 'EXPIRED':
-        return (
-          <span className="status-badge badge-deadline-expired" title={`Venció hace ${Math.abs(exp.daysUntilExpiration ?? 0)} días`}>
-            <AlertTriangle size={12} />
-            <span>VENCIDO ({exp.daysUntilExpiration}d)</span>
-          </span>
-        );
-      case 'URGENT':
-        return (
-          <span className="status-badge badge-deadline-urgent" title={exp.daysUntilExpiration === 0 ? 'Vence hoy' : `Vence en ${exp.daysUntilExpiration} días`}>
-            <Clock size={12} />
-            <span>{exp.daysUntilExpiration === 0 ? '¡VENCE HOY!' : `URGENTE (${exp.daysUntilExpiration}d)`}</span>
-          </span>
-        );
-      case 'UPCOMING':
-        return (
-          <span className="status-badge badge-deadline-upcoming" title={`Vence en ${exp.daysUntilExpiration} días`}>
-            <Clock size={12} />
-            <span>PRÓXIMO ({exp.daysUntilExpiration}d)</span>
-          </span>
-        );
-      case 'CURRENT':
-        return (
-          <span className="status-badge badge-deadline-current" title={`Vigente (${exp.daysUntilExpiration} días restantes)`}>
-            <CheckCircle size={12} />
-            <span>VIGENTE ({exp.daysUntilExpiration}d)</span>
-          </span>
-        );
-      default:
-        return (
-          <span className="status-badge status-up">
-            {exp.lifecycleStatus}
-          </span>
-        );
-    }
-  };
-
-  const canCreateOrEdit = role === 'PLATFORM_ADMIN' || role === 'CONSULTANT_ADMIN' || role === 'TECHNICIAN';
-
-  if (authLoading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-        <RefreshCw size={24} className="animate-spin" color="#38bdf8" />
-        <p style={{ marginTop: '0.75rem', color: 'var(--text-secondary)' }}>Verificando credenciales...</p>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="card" style={{ maxWidth: '600px', margin: '3rem auto', textAlign: 'center' }}>
-        <ShieldAlert size={48} color="#f59e0b" style={{ margin: '0 auto 1rem' }} />
-        <h2>Autenticación Requerida</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: '0.75rem 0 1.5rem' }}>
-          Para consultar y gestionar el core de vencimientos, debés iniciar sesión.
-        </p>
-        <Link href="/login" className="btn-refresh" style={{ textDecoration: 'none', justifyContent: 'center', padding: '0.65rem 1.25rem' }}>
-          <span>Ir a Inicio de Sesión</span>
-          <ArrowRight size={16} />
-        </Link>
-      </div>
-    );
-  }
 
   return (
     <div>
-      {/* Header & New Button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Clock size={28} color="#38bdf8" />
-            <span>Gestión de Vencimientos</span>
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.2rem' }}>
-            Control operativo de obligaciones técnicas, plazos legales y estado de cumplimiento.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={() => fetchExpirations(currentPage)} disabled={loading} className="btn-refresh" id="btn-refresh-expirations">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            <span>Actualizar</span>
-          </button>
-
-          {canCreateOrEdit && (
-            <Link
-              href="/expirations/new"
+      <PageHeader
+        title="Gestión de Vencimientos"
+        subtitle="Control operativo de plazos normativos, técnicos y legales."
+        icon={<Clock size={24} />}
+        actions={
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => refetch()}
               className="btn-refresh"
-              style={{ background: 'rgba(16, 185, 129, 0.25)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399', textDecoration: 'none' }}
-              id="btn-new-expiration"
+              title="Actualizar listado"
+              disabled={isFetching}
             >
-              <PlusCircle size={15} />
-              <span>Nuevo Vencimiento</span>
-            </Link>
-          )}
-        </div>
-      </div>
+              <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
+              <span>Actualizar</span>
+            </button>
+
+            {canCreate && (
+              <Link
+                href="/expirations/new"
+                className="btn-refresh"
+                style={{
+                  background: 'rgba(16, 185, 129, 0.25)',
+                  borderColor: 'rgba(16, 185, 129, 0.45)',
+                  color: '#34d399',
+                  textDecoration: 'none',
+                }}
+              >
+                <PlusCircle size={14} />
+                <span>Nuevo Vencimiento</span>
+              </Link>
+            )}
+          </div>
+        }
+      />
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
         <button
-          onClick={() => handleTabChange('all')}
-          style={{
-            padding: '0.45rem 0.9rem',
-            borderRadius: '6px',
-            background: activeTab === 'all' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-            border: activeTab === 'all' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
-            color: activeTab === 'all' ? '#93c5fd' : 'var(--text-secondary)',
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            cursor: 'pointer'
+          onClick={() => {
+            setActiveTab('all');
+            setPage(0);
           }}
+          className={`tab-button ${activeTab === 'all' ? 'active' : ''}`}
         >
           Todos los Vencimientos
         </button>
         <button
-          onClick={() => handleTabChange('upcoming')}
-          style={{
-            padding: '0.45rem 0.9rem',
-            borderRadius: '6px',
-            background: activeTab === 'upcoming' ? 'rgba(245, 158, 11, 0.2)' : 'transparent',
-            border: activeTab === 'upcoming' ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid transparent',
-            color: activeTab === 'upcoming' ? '#fcd34d' : 'var(--text-secondary)',
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            cursor: 'pointer'
+          onClick={() => {
+            setActiveTab('upcoming');
+            setPage(0);
           }}
+          className={`tab-button ${activeTab === 'upcoming' ? 'active' : ''}`}
         >
-          Próximos a Vencer (≤ 30 días)
+          Próximos (≤ 30 días)
         </button>
         <button
-          onClick={() => handleTabChange('expired')}
-          style={{
-            padding: '0.45rem 0.9rem',
-            borderRadius: '6px',
-            background: activeTab === 'expired' ? 'rgba(244, 63, 94, 0.2)' : 'transparent',
-            border: activeTab === 'expired' ? '1px solid rgba(244, 63, 94, 0.4)' : '1px solid transparent',
-            color: activeTab === 'expired' ? '#fb7185' : 'var(--text-secondary)',
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            cursor: 'pointer'
+          onClick={() => {
+            setActiveTab('expired');
+            setPage(0);
           }}
+          className={`tab-button ${activeTab === 'expired' ? 'active' : ''}`}
         >
           Obligaciones Vencidas (&lt; Hoy)
         </button>
       </div>
 
-      {/* Filter Toolbar (Visible only on 'all' tab) */}
+      {/* Filters Toolbar (Only on 'all' tab) */}
       {activeTab === 'all' && (
         <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem', color: '#93c5fd', fontSize: '0.85rem', fontWeight: 600 }}>
@@ -370,11 +280,29 @@ export default function ExpirationsPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem' }}>
             <div>
+              <label className="form-label">Buscar Título</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Ej: Matafuegos..."
+                value={filterSearch}
+                onChange={(e) => {
+                  setFilterSearch(e.target.value);
+                  setPage(0);
+                }}
+                style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
+              />
+            </div>
+
+            <div>
               <label className="form-label">Empresa</label>
               <select
                 className="form-select"
                 value={filterCompanyId}
-                onChange={(e) => setFilterCompanyId(e.target.value)}
+                onChange={(e) => {
+                  setFilterCompanyId(e.target.value);
+                  setPage(0);
+                }}
                 style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
               >
                 <option value="">Todas las empresas</option>
@@ -389,7 +317,10 @@ export default function ExpirationsPage() {
               <select
                 className="form-select"
                 value={filterCategoryId}
-                onChange={(e) => setFilterCategoryId(e.target.value)}
+                onChange={(e) => {
+                  setFilterCategoryId(e.target.value);
+                  setPage(0);
+                }}
                 style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
               >
                 <option value="">Todas las categorías</option>
@@ -404,11 +335,14 @@ export default function ExpirationsPage() {
               <select
                 className="form-select"
                 value={filterLifecycleStatus}
-                onChange={(e) => setFilterLifecycleStatus(e.target.value)}
+                onChange={(e) => {
+                  setFilterLifecycleStatus(e.target.value);
+                  setPage(0);
+                }}
                 style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
               >
                 <option value="">Todos los estados</option>
-                <option value="ACTIVE">Activo (Pendiente)</option>
+                <option value="ACTIVE">Activo</option>
                 <option value="COMPLETED">Completado</option>
                 <option value="CANCELLED">Cancelado</option>
               </select>
@@ -419,11 +353,14 @@ export default function ExpirationsPage() {
               <select
                 className="form-select"
                 value={filterDeadlineStatus}
-                onChange={(e) => setFilterDeadlineStatus(e.target.value)}
+                onChange={(e) => {
+                  setFilterDeadlineStatus(e.target.value);
+                  setPage(0);
+                }}
                 style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
               >
                 <option value="">Todas</option>
-                <option value="EXPIRED">Vencido</option>
+                <option value="EXPIRED">Vencido (&lt; Hoy)</option>
                 <option value="URGENT">Urgente (≤ 7 días)</option>
                 <option value="UPCOMING">Próximo (8 a 30 días)</option>
                 <option value="CURRENT">Vigente (&gt; 30 días)</option>
@@ -436,7 +373,10 @@ export default function ExpirationsPage() {
                 type="date"
                 className="form-input"
                 value={filterFrom}
-                onChange={(e) => setFilterFrom(e.target.value)}
+                onChange={(e) => {
+                  setFilterFrom(e.target.value);
+                  setPage(0);
+                }}
                 style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
               />
             </div>
@@ -447,13 +387,16 @@ export default function ExpirationsPage() {
                 type="date"
                 className="form-input"
                 value={filterTo}
-                onChange={(e) => setFilterTo(e.target.value)}
+                onChange={(e) => {
+                  setFilterTo(e.target.value);
+                  setPage(0);
+                }}
                 style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
               />
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
             <button
               onClick={resetFilters}
               className="btn-refresh"
@@ -465,32 +408,42 @@ export default function ExpirationsPage() {
         </div>
       )}
 
-      {/* Error Message */}
-      {error && (
-        <div style={{ padding: '1rem', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.3)', borderRadius: '8px', color: '#fda4af', marginBottom: '1.5rem' }}>
-          {error}
-        </div>
-      )}
-
-      {/* Expirations Table / List */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {loading && expirations.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3.5rem 0', color: 'var(--text-secondary)' }}>
-            <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 0.5rem' }} color="#38bdf8" />
-            <p>Cargando vencimientos autorizados...</p>
-          </div>
-        ) : expirations.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem' }}>
-            <Clock size={40} color="var(--text-muted)" style={{ margin: '0 auto 1rem' }} />
-            <h3>No se encontraron vencimientos</h3>
-            <p style={{ color: 'var(--text-secondary)', marginTop: '0.4rem', fontSize: '0.88rem' }}>
-              {activeTab !== 'all' || filterCompanyId || filterCategoryId || filterLifecycleStatus || filterDeadlineStatus || filterFrom || filterTo
-                ? 'No hay registros que coincidan con los filtros seleccionados.'
-                : 'No hay vencimientos registrados en tu ámbito de acceso.'}
-            </p>
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
+      {/* Table & List */}
+      {isError ? (
+        <ErrorState
+          title="Error al cargar vencimientos"
+          message="No se pudo obtener el listado de vencimientos autorizados."
+          onRetry={() => refetch()}
+        />
+      ) : isLoading ? (
+        <TableSkeleton rows={6} cols={6} />
+      ) : expirations.length === 0 ? (
+        <EmptyState
+          title="No se encontraron vencimientos"
+          description="No hay obligaciones que coincidan con los filtros seleccionados o tu ámbito de permisos."
+          icon={<Clock size={32} />}
+          action={
+            canCreate ? (
+              <Link
+                href="/expirations/new"
+                className="btn-refresh"
+                style={{
+                  background: 'rgba(16, 185, 129, 0.25)',
+                  borderColor: 'rgba(16, 185, 129, 0.45)',
+                  color: '#34d399',
+                  textDecoration: 'none',
+                }}
+              >
+                <PlusCircle size={14} />
+                <span>Crear Primer Vencimiento</span>
+              </Link>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          {/* Desktop Table View */}
+          <div className="hidden md:block" style={{ overflowX: 'auto' }}>
             <table className="data-table">
               <thead>
                 <tr>
@@ -498,7 +451,7 @@ export default function ExpirationsPage() {
                   <th>Empresa</th>
                   <th>Categoría</th>
                   <th>Título / Obligación</th>
-                  <th>Estado / Plazo</th>
+                  <th>Estado</th>
                   <th>Responsable</th>
                   <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
@@ -507,33 +460,39 @@ export default function ExpirationsPage() {
                 {expirations.map((exp) => (
                   <tr key={exp.id}>
                     <td>
-                      <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: '#f3f4f6' }}>
-                        {exp.expirationDate}
+                      <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: '0.88rem', color: '#f3f4f6' }}>
+                        {formatDateSpanish(exp.expirationDate)}
                       </div>
                       {exp.issueDate && (
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                          Emisión: {exp.issueDate}
+                          Emisión: {formatDateSpanish(exp.issueDate)}
                         </div>
                       )}
                     </td>
 
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {exp.company.businessName}
-                      </div>
+                      <Link
+                        href={`/companies/${exp.company?.id}`}
+                        style={{ fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}
+                        className="hover:underline"
+                      >
+                        {exp.company?.businessName}
+                      </Link>
                     </td>
 
                     <td>
-                      <span style={{
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: '4px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid var(--border-color)',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        color: '#93c5fd'
-                      }}>
-                        {exp.category.name}
+                      <span
+                        style={{
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '4px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          fontSize: '0.74rem',
+                          fontWeight: 600,
+                          color: '#93c5fd',
+                        }}
+                      >
+                        {exp.category?.name}
                       </span>
                     </td>
 
@@ -542,21 +501,25 @@ export default function ExpirationsPage() {
                         {exp.title}
                       </div>
                       {exp.description && (
-                        <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {exp.description}
                         </div>
                       )}
                     </td>
 
                     <td>
-                      {getDeadlineBadge(exp)}
+                      <ExpirationStatusBadge
+                        lifecycleStatus={exp.lifecycleStatus}
+                        deadlineStatus={exp.deadlineStatus}
+                        daysUntilExpiration={exp.daysUntilExpiration}
+                      />
                     </td>
 
                     <td>
                       {exp.responsible ? (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          {exp.responsible.fullName}
-                        </div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          {exp.responsible.firstName} {exp.responsible.lastName}
+                        </span>
                       ) : (
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
                       )}
@@ -573,31 +536,32 @@ export default function ExpirationsPage() {
                           <Eye size={13} />
                         </Link>
 
-                        {canCreateOrEdit && exp.lifecycleStatus === 'ACTIVE' && (
+                        {canCreate && exp.lifecycleStatus === 'ACTIVE' && (
                           <>
-                            <Link
-                              href={`/expirations/${exp.id}/edit`}
-                              className="btn-refresh"
-                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                              title="Editar"
-                            >
-                              <Edit2 size={13} />
-                            </Link>
-
                             <button
-                              onClick={() => openCompleteModal(exp)}
+                              onClick={() => handleOpenComplete(exp)}
                               className="btn-refresh"
-                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
-                              title="Completar vencimiento"
+                              style={{
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.75rem',
+                                borderColor: 'rgba(16, 185, 129, 0.4)',
+                                color: '#34d399',
+                              }}
+                              title="Completar"
                             >
                               <Check size={13} />
                             </button>
 
                             <button
-                              onClick={() => openCancelModal(exp)}
+                              onClick={() => handleOpenCancel(exp)}
                               className="btn-refresh"
-                              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', borderColor: 'rgba(244, 63, 94, 0.4)', color: '#fb7185' }}
-                              title="Cancelar vencimiento"
+                              style={{
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.75rem',
+                                borderColor: 'rgba(244, 63, 94, 0.4)',
+                                color: '#fb7185',
+                              }}
+                              title="Cancelar"
                             >
                               <X size={13} />
                             </button>
@@ -610,52 +574,132 @@ export default function ExpirationsPage() {
               </tbody>
             </table>
           </div>
-        )}
 
-        {/* Pagination bar */}
-        {activeTab === 'all' && totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-color)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            <div>
-              Total: <strong>{totalElements}</strong> registros (Página {currentPage + 1} de {totalPages})
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                onClick={() => fetchExpirations(currentPage - 1)}
-                disabled={currentPage === 0 || loading}
-                className="btn-refresh"
-                style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+          {/* Mobile Cards View */}
+          <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem' }}>
+            {expirations.map((exp) => (
+              <div
+                key={exp.id}
+                style={{
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.6rem',
+                }}
               >
-                Anterior
-              </button>
-              <button
-                onClick={() => fetchExpirations(currentPage + 1)}
-                disabled={currentPage + 1 >= totalPages || loading}
-                className="btn-refresh"
-                style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
-              >
-                Siguiente
-              </button>
-            </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {exp.title}
+                    </h4>
+                    <div style={{ fontSize: '0.8rem', color: '#93c5fd', fontWeight: 600 }}>
+                      {exp.company?.businessName} • {exp.category?.name}
+                    </div>
+                  </div>
+                  <ExpirationStatusBadge
+                    lifecycleStatus={exp.lifecycleStatus}
+                    deadlineStatus={exp.deadlineStatus}
+                    daysUntilExpiration={exp.daysUntilExpiration}
+                    size="sm"
+                  />
+                </div>
+
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  <div><strong>Vence:</strong> {formatDateSpanish(exp.expirationDate)}</div>
+                  {exp.responsible && <div><strong>Responsable:</strong> {exp.responsible.firstName} {exp.responsible.lastName}</div>}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  <Link
+                    href={`/expirations/${exp.id}`}
+                    className="btn-refresh"
+                    style={{ flex: 1, textDecoration: 'none', justifyContent: 'center', fontSize: '0.78rem' }}
+                  >
+                    <span>Ver Detalle</span>
+                    <Eye size={13} />
+                  </Link>
+
+                  {canCreate && exp.lifecycleStatus === 'ACTIVE' && (
+                    <button
+                      onClick={() => handleOpenComplete(exp)}
+                      className="btn-refresh"
+                      style={{
+                        padding: '0.35rem 0.65rem',
+                        fontSize: '0.78rem',
+                        borderColor: 'rgba(16, 185, 129, 0.4)',
+                        color: '#34d399',
+                      }}
+                      title="Completar"
+                    >
+                      <Check size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
 
-      {/* Modal: Complete Expiration */}
-      {completeModalOpen && selectedExpiration && (
+          {/* Pagination */}
+          {activeTab === 'all' && totalPages > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '0.85rem 1.25rem',
+                borderTop: '1px solid var(--border-color)',
+                fontSize: '0.82rem',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <div>
+                Total: <strong>{totalElements}</strong> vencimientos (Página {page + 1} de {totalPages})
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0 || isFetching}
+                  className="btn-refresh"
+                  style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page + 1 >= totalPages || isFetching}
+                  className="btn-refresh"
+                  style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Complete Modal */}
+      {completeModalOpen && selectedExp && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckCircle size={20} />
+                <CheckCircle2 size={20} />
                 <span>Completar Vencimiento</span>
               </h3>
-              <button onClick={() => setCompleteModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button
+                onClick={() => setCompleteModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
                 <X size={18} />
               </button>
             </div>
 
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              Marcar como cumplida la obligación <strong>{selectedExpiration.title}</strong> de <strong>{selectedExpiration.company.businessName}</strong>.
+              Marcar como cumplida la obligación <strong>{selectedExp.title}</strong> de <strong>{selectedExp.company?.businessName}</strong>.
             </p>
 
             {actionError && (
@@ -676,7 +720,7 @@ export default function ExpirationsPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Notas de Cumplimiento / Observaciones</label>
+                <label className="form-label">Notas de Cumplimiento</label>
                 <textarea
                   className="form-textarea"
                   placeholder="Ej: Matafuegos recargados con certificado nº 1234..."
@@ -690,17 +734,17 @@ export default function ExpirationsPage() {
                   type="button"
                   onClick={() => setCompleteModalOpen(false)}
                   className="btn-refresh"
-                  disabled={actionSubmitting}
+                  disabled={completeMutation.isPending}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={actionSubmitting}
+                  disabled={completeMutation.isPending}
                   className="btn-refresh"
                   style={{ background: 'rgba(16, 185, 129, 0.25)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
                 >
-                  {actionSubmitting ? 'Guardando...' : 'Confirmar Cumplimiento'}
+                  {completeMutation.isPending ? 'Guardando...' : 'Confirmar Cumplimiento'}
                 </button>
               </div>
             </form>
@@ -708,8 +752,8 @@ export default function ExpirationsPage() {
         </div>
       )}
 
-      {/* Modal: Cancel Expiration */}
-      {cancelModalOpen && selectedExpiration && (
+      {/* Cancel Modal */}
+      {cancelModalOpen && selectedExp && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -717,13 +761,16 @@ export default function ExpirationsPage() {
                 <XCircle size={20} />
                 <span>Cancelar Vencimiento</span>
               </h3>
-              <button onClick={() => setCancelModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button
+                onClick={() => setCancelModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
                 <X size={18} />
               </button>
             </div>
 
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              ¿Estás seguro de cancelar el vencimiento <strong>{selectedExpiration.title}</strong>? Esta acción no borra el registro para preservar la auditoría comercial.
+              ¿Estás seguro de cancelar el vencimiento <strong>{selectedExp.title}</strong>? Esta acción no borra el registro para preservar la auditoría comercial.
             </p>
 
             {actionError && (
@@ -737,7 +784,7 @@ export default function ExpirationsPage() {
                 <label className="form-label">Motivo de Cancelación (Opcional)</label>
                 <textarea
                   className="form-textarea"
-                  placeholder="Ej: Carga duplicada, equipo retirado de servicio..."
+                  placeholder="Ej: Carga duplicada o equipo retirado..."
                   value={actionReason}
                   onChange={(e) => setActionReason(e.target.value)}
                 />
@@ -748,17 +795,17 @@ export default function ExpirationsPage() {
                   type="button"
                   onClick={() => setCancelModalOpen(false)}
                   className="btn-refresh"
-                  disabled={actionSubmitting}
+                  disabled={cancelMutation.isPending}
                 >
                   Volver
                 </button>
                 <button
                   type="submit"
-                  disabled={actionSubmitting}
+                  disabled={cancelMutation.isPending}
                   className="btn-refresh"
                   style={{ background: 'rgba(244, 63, 94, 0.25)', borderColor: 'rgba(244, 63, 94, 0.4)', color: '#fb7185' }}
                 >
-                  {actionSubmitting ? 'Cancelando...' : 'Confirmar Cancelación'}
+                  {cancelMutation.isPending ? 'Cancelando...' : 'Confirmar Cancelación'}
                 </button>
               </div>
             </form>
@@ -766,5 +813,13 @@ export default function ExpirationsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ExpirationsPage() {
+  return (
+    <ProtectedRoute>
+      <ExpirationsContent />
+    </ProtectedRoute>
   );
 }
