@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { systemService } from '@/services/system.service';
 import { HealthStatus, SystemInfo } from '@/types';
-import { API_BASE_URL } from '@/lib/api-client';
+import { getApiBaseUrl } from '@/lib/api-client';
 import { Activity, RefreshCw, Server, Database, CheckCircle2, XCircle } from 'lucide-react';
 
 export function SystemStatusCard() {
@@ -76,7 +76,7 @@ export function SystemStatusCard() {
         <tbody>
           <tr>
             <td className="label">Target API URL</td>
-            <td className="value">{API_BASE_URL}</td>
+            <td className="value">{getApiBaseUrl() || '(Same-Origin Proxy)'}</td>
           </tr>
           <tr>
             <td className="label">Endpoint Tested</td>

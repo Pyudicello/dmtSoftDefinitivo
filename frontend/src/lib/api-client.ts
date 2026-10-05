@@ -1,14 +1,12 @@
-function resolveApiBaseUrl(): string {
+export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
-    // When running on HTTPS (e.g. Amplify), use same-origin relative /api route to avoid mixed content blocking
+    // In the browser on HTTPS, use same-origin relative route so Next.js proxies securely over HTTPS
     if (window.location.protocol === 'https:' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.startsWith('http://'))) {
       return '';
     }
   }
   return process.env.NEXT_PUBLIC_API_URL || '';
 }
-
-const API_BASE_URL = resolveApiBaseUrl();
 
 export class ApiClientError extends Error {
   constructor(
@@ -43,7 +41,8 @@ export async function apiClient<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   const token = getStoredAuthToken();
 
@@ -100,4 +99,3 @@ export async function apiClient<T>(
   }
 }
 
-export { API_BASE_URL };
