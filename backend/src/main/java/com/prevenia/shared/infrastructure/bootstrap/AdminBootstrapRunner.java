@@ -48,16 +48,12 @@ public class AdminBootstrapRunner implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (!bootstrapEnabled && (adminEmail == null || adminEmail.isBlank())) {
-            log.debug("Admin bootstrap is disabled or no email specified. Skipping.");
+        if (!bootstrapEnabled || adminEmail == null || adminEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
+            log.debug("Admin bootstrap is disabled or credentials not specified. Skipping.");
             return;
         }
 
         String normalizedEmail = adminEmail.trim().toLowerCase();
-        if (normalizedEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
-            log.warn("Admin bootstrap enabled but email or password was empty. Skipping.");
-            return;
-        }
 
         if (userRepository.existsByEmail(normalizedEmail)) {
             log.info("Admin bootstrap: user with email {} already exists. Skipping bootstrap creation.", normalizedEmail);
