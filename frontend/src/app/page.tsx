@@ -65,94 +65,96 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Role Testing Quick Matrix */}
-      <div className="card" style={{ marginBottom: '2rem', border: '1px solid var(--border-accent)' }}>
-        <div className="card-header">
-          <div className="card-title">
-            <Lock size={20} color="#38bdf8" />
-            <span>Acceso Rápido por Rol (Demostración y Testing)</span>
+      {/* Role Testing Quick Matrix (Local & Development only) */}
+      {process.env.NEXT_PUBLIC_APP_ENV !== 'production' && (
+        <div className="card" style={{ marginBottom: '2rem', border: '1px solid var(--border-accent)' }}>
+          <div className="card-header">
+            <div className="card-title">
+              <Lock size={20} color="#38bdf8" />
+              <span>Acceso Rápido por Rol (Demostración y Testing)</span>
+            </div>
+            {isAuthenticated && user && (
+              <span className="status-badge status-up">
+                Conectado como: {user.role} ({user.email})
+              </span>
+            )}
           </div>
-          {isAuthenticated && user && (
-            <span className="status-badge status-up">
-              Conectado como: {user.role} ({user.email})
-            </span>
-          )}
+
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '1.25rem' }}>
+            Hacé click en cualquiera de los roles para autenticarte instantáneamente y acceder al Dashboard con su ámbito de autorización:
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+            <div style={{ padding: '1rem', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '8px' }}>
+              <div style={{ fontWeight: 700, color: '#93c5fd', fontSize: '0.9rem' }}>1. Consultor Admin A</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
+                Scope completo de Consultora A (Macro, Andreani, Coca-Cola). CRUD de empresas y vencimientos.
+              </div>
+              <button
+                onClick={async () => {
+                  await quickLoginAs('admin@demo.com', 'Demo1234!');
+                  router.push('/dashboard');
+                }}
+                className="btn-refresh"
+                style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem' }}
+              >
+                <span>Ingresar como Admin A</span>
+              </button>
+            </div>
+
+            <div style={{ padding: '1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '8px' }}>
+              <div style={{ fontWeight: 700, color: '#fcd34d', fontSize: '0.9rem' }}>2. Técnico Carlos</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
+                Opera solo en empresas asignadas (Macro, Andreani). Protección anti-IDOR 404 para Coca-Cola.
+              </div>
+              <button
+                onClick={async () => {
+                  await quickLoginAs('carlos@demo.com', 'Demo1234!');
+                  router.push('/dashboard');
+                }}
+                className="btn-refresh"
+                style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(245, 158, 11, 0.3)', color: '#fcd34d' }}
+              >
+                <span>Ingresar como Técnico</span>
+              </button>
+            </div>
+
+            <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px' }}>
+              <div style={{ fontWeight: 700, color: '#6ee7b7', fontSize: '0.9rem' }}>3. Cliente Macro</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
+                Solo lectura de su empresa Banco Macro. Acciones de creación/edición bloqueadas.
+              </div>
+              <button
+                onClick={async () => {
+                  await quickLoginAs('macro@demo.com', 'Demo1234!');
+                  router.push('/dashboard');
+                }}
+                className="btn-refresh"
+                style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(16, 185, 129, 0.3)', color: '#6ee7b7' }}
+              >
+                <span>Ingresar como Cliente</span>
+              </button>
+            </div>
+
+            <div style={{ padding: '1rem', background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.2)', borderRadius: '8px' }}>
+              <div style={{ fontWeight: 700, color: '#f472b6', fontSize: '0.9rem' }}>4. Admin Org B (Cross-Tenant)</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
+                Consultora B. Aislamiento estricto: no puede ver ni consultar datos de la Consultora A.
+              </div>
+              <button
+                onClick={async () => {
+                  await quickLoginAs('admin.b@demo.com', 'Demo1234!');
+                  router.push('/dashboard');
+                }}
+                className="btn-refresh"
+                style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(236, 72, 153, 0.3)', color: '#f472b6' }}
+              >
+                <span>Ingresar como Org B</span>
+              </button>
+            </div>
+          </div>
         </div>
-
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '1.25rem' }}>
-          Hacé click en cualquiera de los roles para autenticarte instantáneamente y acceder al Dashboard con su ámbito de autorización:
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-          <div style={{ padding: '1rem', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '8px' }}>
-            <div style={{ fontWeight: 700, color: '#93c5fd', fontSize: '0.9rem' }}>1. Consultor Admin A</div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-              Scope completo de Consultora A (Macro, Andreani, Coca-Cola). CRUD de empresas y vencimientos.
-            </div>
-            <button
-              onClick={async () => {
-                await quickLoginAs('admin@demo.com', 'Demo1234!');
-                router.push('/dashboard');
-              }}
-              className="btn-refresh"
-              style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem' }}
-            >
-              <span>Ingresar como Admin A</span>
-            </button>
-          </div>
-
-          <div style={{ padding: '1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '8px' }}>
-            <div style={{ fontWeight: 700, color: '#fcd34d', fontSize: '0.9rem' }}>2. Técnico Carlos</div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-              Opera solo en empresas asignadas (Macro, Andreani). Protección anti-IDOR 404 para Coca-Cola.
-            </div>
-            <button
-              onClick={async () => {
-                await quickLoginAs('carlos@demo.com', 'Demo1234!');
-                router.push('/dashboard');
-              }}
-              className="btn-refresh"
-              style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(245, 158, 11, 0.3)', color: '#fcd34d' }}
-            >
-              <span>Ingresar como Técnico</span>
-            </button>
-          </div>
-
-          <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px' }}>
-            <div style={{ fontWeight: 700, color: '#6ee7b7', fontSize: '0.9rem' }}>3. Cliente Macro</div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-              Solo lectura de su empresa Banco Macro. Acciones de creación/edición bloqueadas.
-            </div>
-            <button
-              onClick={async () => {
-                await quickLoginAs('macro@demo.com', 'Demo1234!');
-                router.push('/dashboard');
-              }}
-              className="btn-refresh"
-              style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(16, 185, 129, 0.3)', color: '#6ee7b7' }}
-            >
-              <span>Ingresar como Cliente</span>
-            </button>
-          </div>
-
-          <div style={{ padding: '1rem', background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.2)', borderRadius: '8px' }}>
-            <div style={{ fontWeight: 700, color: '#f472b6', fontSize: '0.9rem' }}>4. Admin Org B (Cross-Tenant)</div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-              Consultora B. Aislamiento estricto: no puede ver ni consultar datos de la Consultora A.
-            </div>
-            <button
-              onClick={async () => {
-                await quickLoginAs('admin.b@demo.com', 'Demo1234!');
-                router.push('/dashboard');
-              }}
-              className="btn-refresh"
-              style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(236, 72, 153, 0.3)', color: '#f472b6' }}
-            >
-              <span>Ingresar como Org B</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Feature Highlights */}
       <div className="grid" style={{ marginBottom: '2rem' }}>

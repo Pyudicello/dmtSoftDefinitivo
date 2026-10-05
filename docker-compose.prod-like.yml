@@ -1,0 +1,97 @@
+# ==========================================================
+# PREVENIA - Production-Like Local Simulation
+# Docker Compose for validating production container builds,
+# env variables, isolated migrations, and non-root runtimes.
+# ==========================================================
+
+name: prevenia-prod-sim
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: prevenia-prod-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: prevenia_prod
+      POSTGRES_USER: prevenia_prod_user
+      POSTGRES_PASSWORD: prevenia_prod_secure_pass_123
+    ports:
+      - "5433:5432"
+    volumes:
+      - prevenia_prod_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prevenia_prod_user -d prevenia_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - prevenia_prod_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: prevenia-prod-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: prevenia_prod
+      DB_USERNAME: prevenia_prod_user
+      DB_PASSWORD: prevenia_prod_secure_pass_123
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://frontend:3000
+      JWT_SECRET: e4b3c2d1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3
+      JWT_EXPIRATION_MINUTES: 1440
+      SERVER_PORT: 8080
+      BOOTSTRAP_ADMIN_ENABLED: "true"
+      BOOTSTRAP_ADMIN_EMAIL: admin@prevenia.com
+      BOOTSTRAP_ADMIN_PASSWORD: AdminProd2026!
+      BOOTSTRAP_ADMIN_FIRST_NAME: Administrador
+      BOOTSTRAP_ADMIN_LAST_NAME: Principal
+      BOOTSTRAP_ADMIN_ORG_NAME: Consultora Principal
+      BOOTSTRAP_ADMIN_ROLE: CONSULTANT_ADMIN
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    networks:
+      - prevenia_prod_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+        NEXT_PUBLIC_APP_ENV: production
+    container_name: prevenia-prod-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_APP_ENV: production
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - prevenia_prod_net
+
+volumes:
+  prevenia_prod_pgdata:
+    name: prevenia_prod_pgdata
+
+networks:
+  prevenia_prod_net:
+    name: prevenia_prod_net
+    driver: bridge

@@ -178,95 +178,98 @@ function LoginForm() {
           </button>
         </form>
 
-        {/* Demo Roles Quick Login Switcher */}
-        <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)' }}>
-          <div
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              color: 'var(--text-secondary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              marginBottom: '0.75rem',
-            }}
-          >
-            ⚡ Perfiles de Prueba Rápidos:
+        {/* Demo Roles Quick Login Switcher (Local & Development only) */}
+        {(process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === 'true' ||
+          (process.env.NEXT_PUBLIC_APP_ENV !== 'production' && process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN !== 'false')) && (
+          <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)' }}>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: 'var(--text-secondary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '0.75rem',
+              }}
+            >
+              ⚡ Perfiles de Prueba Rápidos (Dev Only):
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('admin@demo.com', 'Demo1234!')}
+                style={{
+                  padding: '0.5rem 0.65rem',
+                  textAlign: 'left',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: '6px',
+                  color: '#93c5fd',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ fontWeight: 700 }}>Consultor Admin</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>admin@demo.com</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('carlos@demo.com', 'Demo1234!')}
+                style={{
+                  padding: '0.5rem 0.65rem',
+                  textAlign: 'left',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '6px',
+                  color: '#fcd34d',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ fontWeight: 700 }}>Técnico Carlos</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>carlos@demo.com</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('macro@demo.com', 'Demo1234!')}
+                style={{
+                  padding: '0.5rem 0.65rem',
+                  textAlign: 'left',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: '6px',
+                  color: '#6ee7b7',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ fontWeight: 700 }}>Cliente Macro</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>macro@demo.com</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('admin.b@demo.com', 'Demo1234!')}
+                style={{
+                  padding: '0.5rem 0.65rem',
+                  textAlign: 'left',
+                  background: 'rgba(236, 72, 153, 0.1)',
+                  border: '1px solid rgba(236, 72, 153, 0.3)',
+                  borderRadius: '6px',
+                  color: '#f472b6',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ fontWeight: 700 }}>Admin Org B</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>admin.b@demo.com</div>
+              </button>
+            </div>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin@demo.com', 'Demo1234!')}
-              style={{
-                padding: '0.5rem 0.65rem',
-                textAlign: 'left',
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '6px',
-                color: '#93c5fd',
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ fontWeight: 700 }}>Consultor Admin</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>admin@demo.com</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('carlos@demo.com', 'Demo1234!')}
-              style={{
-                padding: '0.5rem 0.65rem',
-                textAlign: 'left',
-                background: 'rgba(245, 158, 11, 0.1)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
-                borderRadius: '6px',
-                color: '#fcd34d',
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ fontWeight: 700 }}>Técnico Carlos</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>carlos@demo.com</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('macro@demo.com', 'Demo1234!')}
-              style={{
-                padding: '0.5rem 0.65rem',
-                textAlign: 'left',
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                borderRadius: '6px',
-                color: '#6ee7b7',
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ fontWeight: 700 }}>Cliente Macro</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>macro@demo.com</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin.b@demo.com', 'Demo1234!')}
-              style={{
-                padding: '0.5rem 0.65rem',
-                textAlign: 'left',
-                background: 'rgba(236, 72, 153, 0.1)',
-                border: '1px solid rgba(236, 72, 153, 0.3)',
-                borderRadius: '6px',
-                color: '#f472b6',
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ fontWeight: 700 }}>Admin Org B</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>admin.b@demo.com</div>
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

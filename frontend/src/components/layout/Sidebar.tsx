@@ -16,6 +16,7 @@ import {
   X,
   ChevronRight,
   User,
+  Users,
   Activity,
   AlertTriangle
 } from 'lucide-react';
@@ -57,6 +58,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         match: (path: string) => path.startsWith('/alerts'),
       },
     ];
+
+    if (role === 'CONSULTANT_ADMIN' || role === 'PLATFORM_ADMIN') {
+      items.push({
+        label: 'Usuarios y Equipo',
+        href: '/users',
+        icon: <Users size={18} />,
+        match: (path: string) => path.startsWith('/users'),
+      });
+    }
 
     return items;
   };

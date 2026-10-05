@@ -177,3 +177,21 @@ npm run typecheck
 npm run lint
 npm run build
 ```
+
+---
+
+## ☁️ Día 6 — Infraestructura AWS y CI/CD
+
+PREVENIA cuenta con una arquitectura de nube preparada para producción bajo el principio de **cero desperdicio, seguridad estricta y bajo costo** (~$25 - $48 USD/mes con presupuesto en AWS Budgets):
+
+* 📘 [docs/aws-costs.md](file:///docs/aws-costs.md) — Estimación detallada de costos por servicio, comparativa de regiones (`us-east-1` vs `sa-east-1`), estrategia de ahorro de NAT Gateway y configuración de AWS Budgets.
+* 📘 [docs/deployment.md](file:///docs/deployment.md) — Guía completa de aprovisionamiento, autenticación GitHub OIDC sin claves permanentes, bootstrapping del primer administrador y pipeline de despliegue continuo.
+* 📙 [docs/runbook.md](file:///docs/runbook.md) — Runbook de operaciones, inspección de logs en CloudWatch, procedimientos de rollback por Task Definition / ECR SHA, snapshots de RDS y resolución de incidentes.
+
+### Simulación Local de Producción
+Para validar los contenedores con empaquetado de producción (Next.js Standalone + JRE 21 Alpine con usuarios no privilegiados y migraciones Flyway sin datos demo):
+
+```bash
+docker compose -f docker-compose.prod-like.yml up --build -d
+```
+

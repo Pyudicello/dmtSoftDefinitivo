@@ -31,8 +31,28 @@ export const queryKeys = {
     list: (companyId?: string, priority?: string) =>
       [...queryKeys.alerts.all, 'list', { companyId, priority }] as const,
   },
+  inspections: {
+    all: ['inspections'] as const,
+    list: (params?: any) => [...queryKeys.inspections.all, 'list', params] as const,
+    company: (companyId: string, params?: any) =>
+      [...queryKeys.inspections.all, 'company', companyId, params] as const,
+    detail: (id: string) => [...queryKeys.inspections.all, 'detail', id] as const,
+  },
+  permits: {
+    all: ['permits'] as const,
+    list: (params?: any) => [...queryKeys.permits.all, 'list', params] as const,
+    company: (companyId: string, params?: any) =>
+      [...queryKeys.permits.all, 'company', companyId, params] as const,
+    history: (companyId: string) =>
+      [...queryKeys.permits.all, 'history', companyId] as const,
+    detail: (id: string) => [...queryKeys.permits.all, 'detail', id] as const,
+  },
   users: {
     all: ['users'] as const,
+    list: (role?: string, page?: number, size?: number) =>
+      [...queryKeys.users.all, 'list', { role, page, size }] as const,
     technicians: () => [...queryKeys.users.all, 'technicians'] as const,
+    companyTechnicians: (companyId: string) =>
+      [...queryKeys.users.all, 'company', companyId] as const,
   },
 };

@@ -105,3 +105,55 @@ La consulta final se compone con `Specification.where(baseScope).and(userFilters
 | `GET` | `/api/v1/companies/{companyId}/expirations` | Todos (Scope verificado) | Vencimientos de una empresa específica respetando permisos. |
 | `GET` | `/api/v1/expiration-categories` | Todos | Listado de categorías disponibles (Globales + Tenant). |
 | `POST` | `/api/v1/expiration-categories` | `PLATFORM_ADMIN`, `CONSULTANT_ADMIN` | Alta de nueva categoría (Rechaza códigos duplicados con 409). |
+
+---
+
+## 5. Arquitectura Cloud en AWS (v0.1)
+
+```mermaid
+flowchart TD
+    subgraph Internet["Tráfico Externo"]
+        ClientBrowser["Navegador Web (HTTPS)"]
+    end
+
+    subgraph AWS_Cloud["AWS Cloud — Región us-east-1 (N. Virginia)"]
+        ACM_TLS["AWS Certificate Manager (TLS / SSL)"]
+        
+        subgraph EdgeLayer["Edge / Ingress Layer"]
+            Route53["Amazon Route 53 (DNS)<br/>app.prevenia.com / api.prevenia.com"]
+            CloudFront["Amazon CloudFront (CDN)"]
+            ALB["Application Load Balancer (ALB)<br/>(HTTP 80 → Redirect HTTPS 443)"]
+        end
+
+        subgraph VPC_Prevenia["prevenia-prod-vpc (10.0.0.0/16)"]
+            subgraph Public_Subnets["Subredes Públicas (2 AZs)"]
+                ECS_FE["ECS Fargate: prevenia-frontend<br/>Next.js 15 Standalone (Port 3000)<br/>Non-root nextjs user"]
+                ECS_BE["ECS Fargate: prevenia-backend<br/>Spring Boot 3.3 (Port 8080)<br/>Non-root prevenia user"]
+            end
+
+            subgraph Private_Subnets["Subredes Privadas Aisladas (2 AZs)"]
+                RDS_DB["Amazon RDS PostgreSQL 16<br/>db.t4g.micro • gp3 Encrypted<br/>Publicly Accessible: NO (Port 5432)"]
+            end
+        end
+
+        subgraph Supporting_Services["Servicios de Soporte & Seguridad"]
+            ECR["Amazon ECR (Docker Images SHA-tagged)"]
+            SSM["SSM Parameter Store (Encrypted Secrets)"]
+            CloudWatch["CloudWatch Logs & Alarms (14d Retention)"]
+        end
+    end
+
+    ClientBrowser --> Route53
+    Route53 --> ACM_TLS
+    Route53 --> ALB
+    ALB -->|"/api/*"| ECS_BE
+    ALB -->|"/*"| ECS_FE
+    ECS_FE -.->|SSR / API calls| ALB
+    ECS_BE -->|Port 5432 (SG Restricted)| RDS_DB
+    ECS_BE --> SSM
+    ECS_BE --> CloudWatch
+    ECS_FE --> CloudWatch
+    ECR -.->|Pull Image| ECS_BE
+    ECR -.->|Pull Image| ECS_FE
+```
+

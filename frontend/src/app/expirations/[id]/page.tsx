@@ -156,13 +156,20 @@ function ExpirationDetailContent({ expirationId }: { expirationId: string }) {
         ]}
         actions={
           canEdit ? (
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
               <Link
                 href={`/expirations/${expiration.id}/edit`}
                 className="btn-refresh"
-                style={{ textDecoration: 'none' }}
+                style={{
+                  textDecoration: 'none',
+                  padding: '0.35rem 0.65rem',
+                  fontSize: '0.8rem',
+                  height: '32px',
+                  borderRadius: '6px',
+                  gap: '0.35rem',
+                }}
               >
-                <Edit2 size={14} />
+                <Edit2 size={13} />
                 <span>Editar</span>
               </Link>
 
@@ -174,9 +181,18 @@ function ExpirationDetailContent({ expirationId }: { expirationId: string }) {
                   setCompleteModalOpen(true);
                 }}
                 className="btn-refresh"
-                style={{ background: 'rgba(16, 185, 129, 0.2)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
+                style={{
+                  background: 'rgba(16, 185, 129, 0.18)',
+                  borderColor: 'rgba(16, 185, 129, 0.4)',
+                  color: '#34d399',
+                  padding: '0.35rem 0.65rem',
+                  fontSize: '0.8rem',
+                  height: '32px',
+                  borderRadius: '6px',
+                  gap: '0.35rem',
+                }}
               >
-                <Check size={14} />
+                <Check size={13} />
                 <span>Completar</span>
               </button>
 
@@ -187,9 +203,18 @@ function ExpirationDetailContent({ expirationId }: { expirationId: string }) {
                   setCancelModalOpen(true);
                 }}
                 className="btn-refresh"
-                style={{ background: 'rgba(244, 63, 94, 0.2)', borderColor: 'rgba(244, 63, 94, 0.4)', color: '#fb7185' }}
+                style={{
+                  background: 'rgba(244, 63, 94, 0.18)',
+                  borderColor: 'rgba(244, 63, 94, 0.4)',
+                  color: '#fb7185',
+                  padding: '0.35rem 0.65rem',
+                  fontSize: '0.8rem',
+                  height: '32px',
+                  borderRadius: '6px',
+                  gap: '0.35rem',
+                }}
               >
-                <X size={14} />
+                <X size={13} />
                 <span>Cancelar</span>
               </button>
             </div>

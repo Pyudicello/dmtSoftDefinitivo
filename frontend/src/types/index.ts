@@ -252,6 +252,16 @@ export interface User {
   updatedAt: string;
 }
 
+export interface CreateUserPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  organizationId?: string;
+  companyId?: string;
+}
+
 export interface ApiError {
   timestamp: string;
   status: number;
@@ -260,4 +270,170 @@ export interface ApiError {
   path: string;
   traceId?: string;
   validationErrors?: Record<string, string>;
+}
+
+// ==========================================
+// 5. INSPECTIONS / VISITAS
+// ==========================================
+
+export type InspectionType =
+  | 'ART'
+  | 'MUNICIPAL'
+  | 'PROVINCIAL'
+  | 'HYGIENE_SAFETY_SERVICE'
+  | 'OTHER';
+
+export interface Inspection {
+  id: string;
+  organizationId: string;
+  company: CompanySummary;
+  type: InspectionType;
+  typeLabel: string;
+  visitDate: string;
+  authority: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  result?: string;
+  notes?: string;
+  nextVisitDate?: string | null;
+  documentReference?: string;
+  expirationId?: string | null;
+  nextVisitDeadlineStatus?: ExpirationDeadlineStatus | null;
+  nextVisitDaysRemaining?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateInspectionPayload {
+  companyId: string;
+  type: InspectionType;
+  visitDate: string;
+  authority: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  result?: string;
+  notes?: string;
+  nextVisitDate?: string;
+  documentReference?: string;
+}
+
+export interface UpdateInspectionPayload {
+  type: InspectionType;
+  visitDate: string;
+  authority: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  result?: string;
+  notes?: string;
+  nextVisitDate?: string;
+  documentReference?: string;
+}
+
+export interface InspectionFilterParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+  companyId?: string;
+  type?: InspectionType;
+  from?: string;
+  to?: string;
+  search?: string;
+}
+
+// ==========================================
+// 6. PERMITS / HABILITACIONES / VISADOS
+// ==========================================
+
+export type PermitType =
+  | 'MUNICIPAL'
+  | 'PROVINCIAL'
+  | 'FIRE_DEPARTMENT'
+  | 'OTHER';
+
+export type PermitStatus = 'ACTIVE' | 'RENEWED' | 'EXPIRED' | 'CANCELLED';
+
+export interface Permit {
+  id: string;
+  organizationId: string;
+  company: CompanySummary;
+  type: PermitType;
+  typeLabel: string;
+  issuingAuthority: string;
+  permitNumber: string;
+  issueDate: string;
+  expirationDate: string;
+  status: PermitStatus;
+  statusLabel: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  notes?: string;
+  documentReference?: string;
+  previousPermitId?: string | null;
+  previousPermitNumber?: string | null;
+  expirationId?: string | null;
+  deadlineStatus?: ExpirationDeadlineStatus | null;
+  daysUntilExpiration?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePermitPayload {
+  companyId: string;
+  type: PermitType;
+  issuingAuthority: string;
+  permitNumber: string;
+  issueDate: string;
+  expirationDate: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  notes?: string;
+  documentReference?: string;
+  previousPermitId?: string;
+}
+
+export interface RenewPermitPayload {
+  permitNumber: string;
+  issueDate: string;
+  expirationDate: string;
+  issuingAuthority?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  notes?: string;
+  documentReference?: string;
+}
+
+export interface UpdatePermitPayload {
+  type: PermitType;
+  issuingAuthority: string;
+  permitNumber: string;
+  issueDate: string;
+  expirationDate: string;
+  status?: PermitStatus;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  notes?: string;
+  documentReference?: string;
+}
+
+export interface CancelPermitPayload {
+  reason?: string;
+}
+
+export interface PermitFilterParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+  companyId?: string;
+  type?: PermitType;
+  status?: PermitStatus;
+  from?: string;
+  to?: string;
+  search?: string;
 }

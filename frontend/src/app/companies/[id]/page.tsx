@@ -7,6 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { companyService } from '@/services/company.service';
 import { expirationService } from '@/services/expiration.service';
+import { inspectionService } from '@/services/inspection.service';
+import { permitService } from '@/services/permit.service';
 import { queryKeys } from '@/lib/query-keys';
 import { formatDateSpanish } from '@/lib/date-utils';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
@@ -16,7 +18,14 @@ import { ExpirationStatusBadge } from '@/components/ui/ExpirationStatusBadge';
 import { CardSkeleton, DetailSkeleton, TableSkeleton } from '@/components/ui/LoadingSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { Expiration } from '@/types';
+import { InspectionList } from '@/components/inspections/InspectionList';
+import { InspectionModal } from '@/components/inspections/InspectionModal';
+import { InspectionDetailModal } from '@/components/inspections/InspectionDetailModal';
+import { PermitList } from '@/components/permits/PermitList';
+import { PermitModal } from '@/components/permits/PermitModal';
+import { RenewPermitModal } from '@/components/permits/RenewPermitModal';
+import { PermitDetailModal } from '@/components/permits/PermitDetailModal';
+import { Expiration, Inspection, Permit, RenewPermitPayload } from '@/types';
 import {
   Building2,
   ArrowLeft,
@@ -35,6 +44,8 @@ import {
   Check,
   X,
   XCircle,
+  ClipboardCheck,
+  Award,
 } from 'lucide-react';
 
 function CompanyDetailContent({ companyId }: { companyId: string }) {
@@ -42,9 +53,9 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
   const toast = useToast();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'resumen' | 'vencimientos'>('resumen');
+  const [activeTab, setActiveTab] = useState<'resumen' | 'vencimientos' | 'inspecciones' | 'habilitaciones'>('resumen');
 
-  // Modals for complete & cancel
+  // Modals for Expirations
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedExp, setSelectedExp] = useState<Expiration | null>(null);
@@ -52,6 +63,17 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
   const [actionDate, setActionDate] = useState('');
   const [actionReason, setActionReason] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Modals for Inspections
+  const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
+  const [inspectionDetailModalOpen, setInspectionDetailModalOpen] = useState(false);
+  const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
+
+  // Modals for Permits
+  const [permitModalOpen, setPermitModalOpen] = useState(false);
+  const [renewPermitModalOpen, setRenewPermitModalOpen] = useState(false);
+  const [permitDetailModalOpen, setPermitDetailModalOpen] = useState(false);
+  const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null);
 
   // Queries
   const {
@@ -67,14 +89,41 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
   const {
     data: companyExpirationsData,
     isLoading: expirationsLoading,
-    isError: expirationsError,
   } = useQuery({
     queryKey: queryKeys.companies.expirations(companyId),
     queryFn: () => expirationService.getCompanyExpirations(companyId),
     enabled: activeTab === 'vencimientos',
   });
 
-  // Complete / Cancel Mutations
+  const {
+    data: companyInspectionsData,
+    isLoading: inspectionsLoading,
+  } = useQuery({
+    queryKey: queryKeys.inspections.company(companyId),
+    queryFn: () => inspectionService.getCompanyInspections(companyId),
+    enabled: activeTab === 'inspecciones',
+  });
+
+  const {
+    data: companyPermitsData,
+    isLoading: permitsLoading,
+  } = useQuery({
+    queryKey: queryKeys.permits.company(companyId),
+    queryFn: () => permitService.getCompanyPermits(companyId),
+    enabled: activeTab === 'habilitaciones',
+  });
+
+  const invalidateAllSync = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.companies.metrics(companyId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.companies.expirations(companyId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.inspections.company(companyId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.permits.company(companyId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.expirations.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
+  };
+
+  // Expiration Complete / Cancel Mutations
   const completeMutation = useMutation({
     mutationFn: ({ id, completedAt, notes }: { id: string; completedAt?: string; notes?: string }) =>
       expirationService.completeExpiration(id, { completedAt, notes }),
@@ -82,11 +131,7 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
       toast.success('Vencimiento completado con éxito');
       setCompleteModalOpen(false);
       setSelectedExp(null);
-      queryClient.invalidateQueries({ queryKey: queryKeys.companies.metrics(companyId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.companies.expirations(companyId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.expirations.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
+      invalidateAllSync();
     },
     onError: (err: any) => {
       setActionError(err?.errorBody?.message || err?.message || 'Error al completar el vencimiento');
@@ -100,19 +145,110 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
       toast.success('Vencimiento cancelado');
       setCancelModalOpen(false);
       setSelectedExp(null);
-      queryClient.invalidateQueries({ queryKey: queryKeys.companies.metrics(companyId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.companies.expirations(companyId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.expirations.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
+      invalidateAllSync();
     },
     onError: (err: any) => {
       setActionError(err?.errorBody?.message || err?.message || 'Error al cancelar el vencimiento');
     },
   });
 
-  const canCreate = role === 'PLATFORM_ADMIN' || role === 'CONSULTANT_ADMIN' || role === 'TECHNICIAN';
+  // Inspection Mutations
+  const createInspectionMutation = useMutation({
+    mutationFn: (data: any) => inspectionService.createCompanyInspection(companyId, data),
+    onSuccess: () => {
+      toast.success('Visita / Inspección registrada con éxito');
+      setInspectionModalOpen(false);
+      setSelectedInspection(null);
+      invalidateAllSync();
+    },
+    onError: (err: any) => {
+      toast.error(err?.errorBody?.message || err?.message || 'Error al registrar inspección');
+    },
+  });
 
+  const updateInspectionMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => inspectionService.updateInspection(id, data),
+    onSuccess: () => {
+      toast.success('Inspección actualizada correctamente');
+      setInspectionModalOpen(false);
+      setSelectedInspection(null);
+      invalidateAllSync();
+    },
+    onError: (err: any) => {
+      toast.error(err?.errorBody?.message || err?.message || 'Error al actualizar inspección');
+    },
+  });
+
+  const deleteInspectionMutation = useMutation({
+    mutationFn: (id: string) => inspectionService.deleteInspection(id),
+    onSuccess: () => {
+      toast.success('Inspección eliminada');
+      setInspectionDetailModalOpen(false);
+      setSelectedInspection(null);
+      invalidateAllSync();
+    },
+    onError: (err: any) => {
+      toast.error(err?.errorBody?.message || err?.message || 'Error al eliminar inspección');
+    },
+  });
+
+  // Permit Mutations
+  const createPermitMutation = useMutation({
+    mutationFn: (data: any) => permitService.createCompanyPermit(companyId, data),
+    onSuccess: () => {
+      toast.success('Habilitación / Visado registrado con éxito');
+      setPermitModalOpen(false);
+      setSelectedPermit(null);
+      invalidateAllSync();
+    },
+    onError: (err: any) => {
+      toast.error(err?.errorBody?.message || err?.message || 'Error al registrar habilitación');
+    },
+  });
+
+  const renewPermitMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: RenewPermitPayload }) =>
+      permitService.renewPermit(id, payload),
+    onSuccess: () => {
+      toast.success('Habilitación renovada con éxito. Registro histórico archivado.');
+      setRenewPermitModalOpen(false);
+      setSelectedPermit(null);
+      invalidateAllSync();
+    },
+    onError: (err: any) => {
+      toast.error(err?.errorBody?.message || err?.message || 'Error al renovar habilitación');
+    },
+  });
+
+  const updatePermitMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => permitService.updatePermit(id, data),
+    onSuccess: () => {
+      toast.success('Habilitación actualizada');
+      setPermitModalOpen(false);
+      setSelectedPermit(null);
+      invalidateAllSync();
+    },
+    onError: (err: any) => {
+      toast.error(err?.errorBody?.message || err?.message || 'Error al actualizar habilitación');
+    },
+  });
+
+  const deletePermitMutation = useMutation({
+    mutationFn: (id: string) => permitService.deletePermit(id),
+    onSuccess: () => {
+      toast.success('Habilitación eliminada');
+      setPermitDetailModalOpen(false);
+      setSelectedPermit(null);
+      invalidateAllSync();
+    },
+    onError: (err: any) => {
+      toast.error(err?.errorBody?.message || err?.message || 'Error al eliminar habilitación');
+    },
+  });
+
+  const canManage = role === 'PLATFORM_ADMIN' || role === 'CONSULTANT_ADMIN' || role === 'TECHNICIAN';
+
+  // Expiration modal handlers
   const handleOpenComplete = (exp: Expiration) => {
     setSelectedExp(exp);
     setActionNotes('');
@@ -145,6 +281,78 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
       id: selectedExp.id,
       reason: actionReason || undefined,
     });
+  };
+
+  // Inspection modal handlers
+  const handleOpenInspectionCreate = () => {
+    setSelectedInspection(null);
+    setInspectionModalOpen(true);
+  };
+
+  const handleOpenInspectionEdit = (insp: Inspection) => {
+    setSelectedInspection(insp);
+    setInspectionDetailModalOpen(false);
+    setInspectionModalOpen(true);
+  };
+
+  const handleOpenInspectionDetail = (insp: Inspection) => {
+    setSelectedInspection(insp);
+    setInspectionDetailModalOpen(true);
+  };
+
+  const handleInspectionSubmit = async (data: any) => {
+    if (selectedInspection) {
+      await updateInspectionMutation.mutateAsync({ id: selectedInspection.id, data });
+    } else {
+      await createInspectionMutation.mutateAsync(data);
+    }
+  };
+
+  const handleInspectionDelete = (insp: Inspection) => {
+    if (confirm(`¿Estás seguro de eliminar la inspección de "${insp.authority}" del ${formatDateSpanish(insp.visitDate)}?`)) {
+      deleteInspectionMutation.mutate(insp.id);
+    }
+  };
+
+  // Permit modal handlers
+  const handleOpenPermitCreate = () => {
+    setSelectedPermit(null);
+    setPermitModalOpen(true);
+  };
+
+  const handleOpenPermitEdit = (permit: Permit) => {
+    setSelectedPermit(permit);
+    setPermitDetailModalOpen(false);
+    setPermitModalOpen(true);
+  };
+
+  const handleOpenPermitRenew = (permit: Permit) => {
+    setSelectedPermit(permit);
+    setPermitDetailModalOpen(false);
+    setRenewPermitModalOpen(true);
+  };
+
+  const handleOpenPermitDetail = (permit: Permit) => {
+    setSelectedPermit(permit);
+    setPermitDetailModalOpen(true);
+  };
+
+  const handlePermitSubmit = async (data: any) => {
+    if (selectedPermit) {
+      await updatePermitMutation.mutateAsync({ id: selectedPermit.id, data });
+    } else {
+      await createPermitMutation.mutateAsync(data);
+    }
+  };
+
+  const handlePermitRenewSubmit = async (permitId: string, payload: RenewPermitPayload) => {
+    await renewPermitMutation.mutateAsync({ id: permitId, payload });
+  };
+
+  const handlePermitDelete = (permit: Permit) => {
+    if (confirm(`¿Estás seguro de eliminar la habilitación "${permit.permitNumber}" (${permit.issuingAuthority})?`)) {
+      deletePermitMutation.mutate(permit.id);
+    }
   };
 
   if (metricsError) {
@@ -206,6 +414,8 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
 
   const company = metricsData.company;
   const expirations = companyExpirationsData?.content || [];
+  const inspections = companyInspectionsData?.content || [];
+  const permits = companyPermitsData?.content || [];
 
   return (
     <div>
@@ -218,21 +428,64 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
           { label: company.businessName },
         ]}
         actions={
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-            {canCreate && (
-              <Link
-                href={`/expirations/new?companyId=${company.id}`}
-                className="btn-refresh"
-                style={{
-                  background: 'rgba(16, 185, 129, 0.25)',
-                  borderColor: 'rgba(16, 185, 129, 0.45)',
-                  color: '#34d399',
-                  textDecoration: 'none',
-                }}
-              >
-                <PlusCircle size={14} />
-                <span>Nuevo Vencimiento</span>
-              </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+            {canManage && (
+              <>
+                <button
+                  onClick={handleOpenInspectionCreate}
+                  className="btn-refresh"
+                  style={{
+                    background: 'rgba(99, 102, 241, 0.18)',
+                    borderColor: 'rgba(99, 102, 241, 0.4)',
+                    color: '#818cf8',
+                    padding: '0.35rem 0.65rem',
+                    fontSize: '0.8rem',
+                    height: '32px',
+                    borderRadius: '6px',
+                    gap: '0.35rem',
+                  }}
+                >
+                  <ClipboardCheck size={13} />
+                  <span>Nueva Visita</span>
+                </button>
+
+                <button
+                  onClick={handleOpenPermitCreate}
+                  className="btn-refresh"
+                  style={{
+                    background: 'rgba(56, 189, 248, 0.18)',
+                    borderColor: 'rgba(56, 189, 248, 0.4)',
+                    color: '#38bdf8',
+                    padding: '0.35rem 0.65rem',
+                    fontSize: '0.8rem',
+                    height: '32px',
+                    borderRadius: '6px',
+                    gap: '0.35rem',
+                  }}
+                >
+                  <Award size={13} />
+                  <span>Nueva Habilitación</span>
+                </button>
+
+                <Link
+                  href={`/expirations/new?companyId=${company.id}`}
+                  className="btn-refresh"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.18)',
+                    borderColor: 'rgba(16, 185, 129, 0.4)',
+                    color: '#34d399',
+                    textDecoration: 'none',
+                    padding: '0.35rem 0.65rem',
+                    fontSize: '0.8rem',
+                    height: '32px',
+                    borderRadius: '6px',
+                    gap: '0.35rem',
+                  }}
+                >
+                  <PlusCircle size={13} />
+                  <span>Nuevo Vencimiento</span>
+                </Link>
+              </>
             )}
           </div>
         }
@@ -278,7 +531,7 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
       </div>
 
       {/* Tabs Navigation */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', overflowX: 'auto' }}>
         <button
           onClick={() => setActiveTab('resumen')}
           className={`tab-button ${activeTab === 'resumen' ? 'active' : ''}`}
@@ -291,9 +544,23 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
         >
           Vencimientos ({metricsData.expiredCount + metricsData.next30DaysCount + metricsData.currentCount + metricsData.completedCount})
         </button>
+        <button
+          onClick={() => setActiveTab('inspecciones')}
+          className={`tab-button ${activeTab === 'inspecciones' ? 'active' : ''}`}
+        >
+          <ClipboardCheck size={14} style={{ verticalAlign: 'middle', marginRight: '0.35rem' }} />
+          Visitas / Inspecciones
+        </button>
+        <button
+          onClick={() => setActiveTab('habilitaciones')}
+          className={`tab-button ${activeTab === 'habilitaciones' ? 'active' : ''}`}
+        >
+          <Award size={14} style={{ verticalAlign: 'middle', marginRight: '0.35rem' }} />
+          Habilitaciones / Visados
+        </button>
       </div>
 
-      {/* Tab: Resumen */}
+      {/* Tab 1: Resumen */}
       {activeTab === 'resumen' && (
         <div className="card">
           <div className="card-header">
@@ -360,7 +627,7 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
         </div>
       )}
 
-      {/* Tab: Vencimientos */}
+      {/* Tab 2: Vencimientos */}
       {activeTab === 'vencimientos' && (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div
@@ -383,7 +650,7 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
               </p>
             </div>
 
-            {canCreate && (
+            {canManage && (
               <Link
                 href={`/expirations/new?companyId=${company.id}`}
                 className="btn-refresh"
@@ -402,40 +669,43 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
           </div>
 
           {expirationsLoading ? (
-            <TableSkeleton rows={4} cols={5} />
+            <div style={{ padding: '1.5rem' }}>
+              <TableSkeleton rows={4} />
+            </div>
           ) : expirations.length === 0 ? (
-            <EmptyState
-              title="No hay vencimientos registrados"
-              description={`Actualmente no existen obligaciones cargadas para ${company.businessName}.`}
-              icon={<Clock size={32} />}
-              action={
-                canCreate ? (
-                  <Link
-                    href={`/expirations/new?companyId=${company.id}`}
-                    className="btn-refresh"
-                    style={{
-                      background: 'rgba(16, 185, 129, 0.25)',
-                      borderColor: 'rgba(16, 185, 129, 0.45)',
-                      color: '#34d399',
-                      textDecoration: 'none',
-                    }}
-                  >
-                    <PlusCircle size={14} />
-                    <span>Crear Primer Vencimiento</span>
-                  </Link>
-                ) : undefined
-              }
-            />
+            <div style={{ padding: '2rem' }}>
+              <EmptyState
+                title="Sin vencimientos registrados"
+                description="Esta empresa no tiene obligaciones ni vencimientos dados de alta."
+                action={
+                  canManage ? (
+                    <Link
+                      href={`/expirations/new?companyId=${company.id}`}
+                      className="btn-refresh"
+                      style={{
+                        background: 'var(--primary-color, #3b82f6)',
+                        color: '#fff',
+                        borderColor: 'transparent',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <PlusCircle size={14} />
+                      <span>Crear Primer Vencimiento</span>
+                    </Link>
+                  ) : undefined
+                }
+              />
+            </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="data-table">
+            <div className="table-responsive">
+              <table className="table">
                 <thead>
                   <tr>
-                    <th>Fecha Venc.</th>
                     <th>Categoría</th>
                     <th>Título / Obligación</th>
-                    <th>Estado</th>
-                    <th>Responsable</th>
+                    <th>Fecha Vencimiento</th>
+                    <th>Estado de Plazo</th>
+                    <th>Estado Ciclo</th>
                     <th style={{ textAlign: 'right' }}>Acciones</th>
                   </tr>
                 </thead>
@@ -443,95 +713,71 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
                   {expirations.map((exp) => (
                     <tr key={exp.id}>
                       <td>
-                        <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: '0.88rem', color: '#f3f4f6' }}>
-                          {formatDateSpanish(exp.expirationDate)}
-                        </div>
-                      </td>
-
-                      <td>
                         <span
                           style={{
-                            padding: '0.15rem 0.45rem',
+                            padding: '0.2rem 0.5rem',
                             borderRadius: '4px',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            border: '1px solid var(--border-color)',
-                            fontSize: '0.74rem',
+                            fontSize: '0.75rem',
                             fontWeight: 600,
-                            color: '#93c5fd',
+                            background: `${exp.category?.colorCode || '#3b82f6'}20`,
+                            color: exp.category?.colorCode || '#3b82f6',
+                            border: `1px solid ${exp.category?.colorCode || '#3b82f6'}40`,
                           }}
                         >
                           {exp.category?.name}
                         </span>
                       </td>
-
-                      <td style={{ maxWidth: '280px' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {exp.title}
-                        </div>
+                      <td>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{exp.title}</div>
                         {exp.description && (
-                          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
                             {exp.description}
                           </div>
                         )}
                       </td>
-
+                      <td style={{ whiteSpace: 'nowrap', fontWeight: 500 }}>
+                        {formatDateSpanish(exp.expirationDate)}
+                      </td>
                       <td>
                         <ExpirationStatusBadge
-                          lifecycleStatus={exp.lifecycleStatus}
                           deadlineStatus={exp.deadlineStatus}
+                          lifecycleStatus={exp.lifecycleStatus}
                           daysUntilExpiration={exp.daysUntilExpiration}
                         />
                       </td>
-
                       <td>
-                        {exp.responsible ? (
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            {exp.responsible.firstName} {exp.responsible.lastName}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
-                        )}
+                        <span className={`status-badge status-${exp.lifecycleStatus.toLowerCase()}`}>
+                          {exp.lifecycleStatus}
+                        </span>
                       </td>
-
                       <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem' }}>
                           <Link
                             href={`/expirations/${exp.id}`}
-                            className="btn-refresh"
-                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                            title="Ver detalle"
+                            className="btn-icon"
+                            title="Ver Detalle"
+                            style={{ color: '#38bdf8' }}
                           >
-                            <Eye size={13} />
+                            <Eye size={16} />
                           </Link>
 
-                          {canCreate && exp.lifecycleStatus === 'ACTIVE' && (
+                          {canManage && exp.lifecycleStatus === 'ACTIVE' && (
                             <>
                               <button
                                 onClick={() => handleOpenComplete(exp)}
-                                className="btn-refresh"
-                                style={{
-                                  padding: '0.25rem 0.5rem',
-                                  fontSize: '0.75rem',
-                                  borderColor: 'rgba(16, 185, 129, 0.4)',
-                                  color: '#34d399',
-                                }}
-                                title="Completar"
+                                className="btn-icon"
+                                title="Marcar como Completado"
+                                style={{ color: '#34d399' }}
                               >
-                                <Check size={13} />
+                                <Check size={16} />
                               </button>
-
                               <button
                                 onClick={() => handleOpenCancel(exp)}
-                                className="btn-refresh"
-                                style={{
-                                  padding: '0.25rem 0.5rem',
-                                  fontSize: '0.75rem',
-                                  borderColor: 'rgba(244, 63, 94, 0.4)',
-                                  color: '#fb7185',
-                                }}
-                                title="Cancelar"
+                                className="btn-icon"
+                                title="Cancelar Vencimiento"
+                                style={{ color: '#f87171' }}
                               >
-                                <X size={13} />
+                                <XCircle size={16} />
                               </button>
                             </>
                           )}
@@ -546,70 +792,134 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
         </div>
       )}
 
-      {/* Complete Modal */}
+      {/* Tab 3: Visitas e Inspecciones */}
+      {activeTab === 'inspecciones' && (
+        <div className="card" style={{ padding: '1.25rem 1.5rem' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Visitas e Inspecciones Técnicas
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.15rem' }}>
+              Historial de inspecciones realizadas por ART, organismos municipales, provinciales y servicios de Higiene y Seguridad. Las próximas visitas programadas se sincronizan con el motor central de vencimientos.
+            </p>
+          </div>
+
+          {inspectionsLoading ? (
+            <TableSkeleton rows={4} />
+          ) : (
+            <InspectionList
+              inspections={inspections}
+              isLoading={inspectionsLoading}
+              canManage={canManage}
+              onOpenCreate={handleOpenInspectionCreate}
+              onOpenDetail={handleOpenInspectionDetail}
+              onOpenEdit={handleOpenInspectionEdit}
+              onDelete={handleInspectionDelete}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Tab 4: Habilitaciones / Visados */}
+      {activeTab === 'habilitaciones' && (
+        <div className="card" style={{ padding: '1.25rem 1.5rem' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Habilitaciones y Visados Oficiales
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.15rem' }}>
+              Control de vigencia y plazos de renovación para habilitaciones municipales, provinciales y de bomberos. El vencimiento de visado se gestiona con el clasificador central de vencimientos y conserva su historial de renovaciones.
+            </p>
+          </div>
+
+          {permitsLoading ? (
+            <TableSkeleton rows={4} />
+          ) : (
+            <PermitList
+              permits={permits}
+              isLoading={permitsLoading}
+              canManage={canManage}
+              onOpenCreate={handleOpenPermitCreate}
+              onOpenDetail={handleOpenPermitDetail}
+              onOpenEdit={handleOpenPermitEdit}
+              onOpenRenew={handleOpenPermitRenew}
+              onDelete={handlePermitDelete}
+            />
+          )}
+        </div>
+      )}
+
+      {/* MODALS SECTION */}
+
+      {/* Complete Expiration Modal */}
       {completeModalOpen && selectedExp && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+        >
+          <div className="card" style={{ width: '100%', maxWidth: '500px', border: '1px solid rgba(16, 185, 129, 0.4)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399', fontWeight: 700 }}>
                 <CheckCircle2 size={20} />
-                <span>Completar Vencimiento</span>
-              </h3>
-              <button
-                onClick={() => setCompleteModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-              >
+                <span>Marcar como Cumplido / Completado</span>
+              </div>
+              <button onClick={() => setCompleteModalOpen(false)} className="btn-icon">
                 <X size={18} />
               </button>
             </div>
 
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              Marcar como cumplida la obligación <strong>{selectedExp.title}</strong> de <strong>{company.businessName}</strong>.
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              Vas a completar el vencimiento: <strong style={{ color: 'var(--text-primary)' }}>{selectedExp.title}</strong>
             </p>
 
             {actionError && (
-              <div style={{ padding: '0.75rem', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.3)', borderRadius: '6px', color: '#fda4af', fontSize: '0.82rem', marginBottom: '1rem' }}>
+              <div style={{ padding: '0.6rem 0.8rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', borderRadius: '6px', color: '#f87171', fontSize: '0.8rem', marginBottom: '1rem' }}>
                 {actionError}
               </div>
             )}
 
             <form onSubmit={handleCompleteSubmit}>
-              <div className="form-group">
-                <label className="form-label">Fecha de Cumplimiento (Opcional, por defecto hoy)</label>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Fecha de Cumplimiento (Opcional)</label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   className="form-input"
                   value={actionDate}
                   onChange={(e) => setActionDate(e.target.value)}
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Notas de Cumplimiento / Observaciones</label>
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Observaciones / Notas de Cumplimiento</label>
                 <textarea
-                  className="form-textarea"
-                  placeholder="Ej: Inspección técnica realizada con acta nº 5678..."
+                  className="form-input"
+                  rows={3}
+                  placeholder="Detalle de tareas realizadas, certificados emitidos..."
                   value={actionNotes}
                   onChange={(e) => setActionNotes(e.target.value)}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setCompleteModalOpen(false)}
-                  className="btn-refresh"
-                  disabled={completeMutation.isPending}
-                >
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button type="button" className="btn-refresh" onClick={() => setCompleteModalOpen(false)}>
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={completeMutation.isPending}
                   className="btn-refresh"
-                  style={{ background: 'rgba(16, 185, 129, 0.25)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
+                  style={{ background: 'rgba(16, 185, 129, 0.9)', color: '#fff', borderColor: 'transparent' }}
+                  disabled={completeMutation.isPending}
                 >
-                  {completeMutation.isPending ? 'Guardando...' : 'Confirmar Cumplimiento'}
+                  {completeMutation.isPending ? 'Completando...' : 'Confirmar Cumplimiento'}
                 </button>
               </div>
             </form>
@@ -617,58 +927,64 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
         </div>
       )}
 
-      {/* Cancel Modal */}
+      {/* Cancel Expiration Modal */}
       {cancelModalOpen && selectedExp && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+        >
+          <div className="card" style={{ width: '100%', maxWidth: '500px', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fb7185', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f87171', fontWeight: 700 }}>
                 <XCircle size={20} />
-                <span>Cancelar Vencimiento</span>
-              </h3>
-              <button
-                onClick={() => setCancelModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-              >
+                <span>Cancelar / Anular Vencimiento</span>
+              </div>
+              <button onClick={() => setCancelModalOpen(false)} className="btn-icon">
                 <X size={18} />
               </button>
             </div>
 
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              ¿Estás seguro de cancelar el vencimiento <strong>{selectedExp.title}</strong>? Esta acción no borra el registro para preservar la auditoría comercial.
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              Vas a anular el vencimiento: <strong style={{ color: 'var(--text-primary)' }}>{selectedExp.title}</strong>
             </p>
 
             {actionError && (
-              <div style={{ padding: '0.75rem', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.3)', borderRadius: '6px', color: '#fda4af', fontSize: '0.82rem', marginBottom: '1rem' }}>
+              <div style={{ padding: '0.6rem 0.8rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', borderRadius: '6px', color: '#f87171', fontSize: '0.8rem', marginBottom: '1rem' }}>
                 {actionError}
               </div>
             )}
 
             <form onSubmit={handleCancelSubmit}>
-              <div className="form-group">
-                <label className="form-label">Motivo de Cancelación (Opcional)</label>
-                <textarea
-                  className="form-textarea"
-                  placeholder="Ej: Obligación duplicada o no aplicable..."
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Motivo de Cancelación</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Ej: Cambio de normativa, servicio reemplazado..."
                   value={actionReason}
                   onChange={(e) => setActionReason(e.target.value)}
+                  required
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setCancelModalOpen(false)}
-                  className="btn-refresh"
-                  disabled={cancelMutation.isPending}
-                >
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button type="button" className="btn-refresh" onClick={() => setCancelModalOpen(false)}>
                   Volver
                 </button>
                 <button
                   type="submit"
-                  disabled={cancelMutation.isPending}
                   className="btn-refresh"
-                  style={{ background: 'rgba(244, 63, 94, 0.25)', borderColor: 'rgba(244, 63, 94, 0.4)', color: '#fb7185' }}
+                  style={{ background: 'rgba(239, 68, 68, 0.9)', color: '#fff', borderColor: 'transparent' }}
+                  disabled={cancelMutation.isPending}
                 >
                   {cancelMutation.isPending ? 'Cancelando...' : 'Confirmar Cancelación'}
                 </button>
@@ -677,6 +993,68 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
           </div>
         </div>
       )}
+
+      {/* Inspection Modals */}
+      <InspectionModal
+        isOpen={inspectionModalOpen}
+        onClose={() => {
+          setInspectionModalOpen(false);
+          setSelectedInspection(null);
+        }}
+        onSubmit={handleInspectionSubmit}
+        companyId={companyId}
+        inspectionToEdit={selectedInspection}
+        isLoading={createInspectionMutation.isPending || updateInspectionMutation.isPending}
+      />
+
+      <InspectionDetailModal
+        isOpen={inspectionDetailModalOpen}
+        onClose={() => {
+          setInspectionDetailModalOpen(false);
+          setSelectedInspection(null);
+        }}
+        inspection={selectedInspection}
+        onEdit={handleOpenInspectionEdit}
+        onDelete={handleInspectionDelete}
+        canManage={canManage}
+      />
+
+      {/* Permit Modals */}
+      <PermitModal
+        isOpen={permitModalOpen}
+        onClose={() => {
+          setPermitModalOpen(false);
+          setSelectedPermit(null);
+        }}
+        onSubmit={handlePermitSubmit}
+        companyId={companyId}
+        permitToEdit={selectedPermit}
+        isLoading={createPermitMutation.isPending || updatePermitMutation.isPending}
+      />
+
+      <RenewPermitModal
+        isOpen={renewPermitModalOpen}
+        onClose={() => {
+          setRenewPermitModalOpen(false);
+          setSelectedPermit(null);
+        }}
+        onSubmit={handlePermitRenewSubmit}
+        permit={selectedPermit}
+        isLoading={renewPermitMutation.isPending}
+      />
+
+      <PermitDetailModal
+        isOpen={permitDetailModalOpen}
+        onClose={() => {
+          setPermitDetailModalOpen(false);
+          setSelectedPermit(null);
+        }}
+        permit={selectedPermit}
+        onEdit={handleOpenPermitEdit}
+        onRenew={handleOpenPermitRenew}
+        onDelete={handlePermitDelete}
+        canManage={canManage}
+      />
     </div>
   );
 }
@@ -684,7 +1062,7 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
 export default function CompanyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={['PLATFORM_ADMIN', 'CONSULTANT_ADMIN', 'TECHNICIAN', 'CLIENT']}>
       <CompanyDetailContent companyId={resolvedParams.id} />
     </ProtectedRoute>
   );

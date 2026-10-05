@@ -22,6 +22,10 @@ public interface ExpirationCategoryRepository extends JpaRepository<ExpirationCa
     @Query("SELECT c FROM ExpirationCategory c WHERE c.id = :id AND (c.organizationId IS NULL OR c.organizationId = :orgId) AND c.active = true")
     Optional<ExpirationCategory> findAccessibleById(@Param("id") UUID id, @Param("orgId") UUID orgId);
 
+    Optional<ExpirationCategory> findByOrganizationIdAndCodeIgnoreCase(UUID organizationId, String code);
+
+    Optional<ExpirationCategory> findByOrganizationIdIsNullAndCodeIgnoreCase(String code);
+
     boolean existsByOrganizationIdAndCodeIgnoreCase(UUID organizationId, String code);
 
     boolean existsByOrganizationIdIsNullAndCodeIgnoreCase(String code);
