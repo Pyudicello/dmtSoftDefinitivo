@@ -1,5 +1,14 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+function resolveApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    // When running on HTTPS (e.g. Amplify), use same-origin relative /api route to avoid mixed content blocking
+    if (window.location.protocol === 'https:' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.startsWith('http://'))) {
+      return '';
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL || '';
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 export class ApiClientError extends Error {
   constructor(
