@@ -75,12 +75,10 @@ jobs:
           NEXT_PUBLIC_API_URL: https://api.prevenia.com
 
   # ==========================================================
-  # 3. Continuous Deployment (CD) to AWS ECS via OIDC
-  # ==========================================================
   deploy-production:
     name: Deploy to AWS Production
     needs: [ backend-ci, frontend-ci ]
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && secrets.AWS_ROLE_TO_ASSUME != ''
     runs-on: ubuntu-latest
     environment: production
 
