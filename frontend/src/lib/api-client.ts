@@ -1,7 +1,7 @@
 export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
-    // In the browser on HTTPS, use same-origin relative route so Next.js proxies securely over HTTPS
-    if (window.location.protocol === 'https:' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.startsWith('http://'))) {
+    // In the browser on HTTPS, always use same-origin relative /api route so Next.js rewrites proxy it over HTTPS
+    if (window.location.protocol === 'https:') {
       return '';
     }
   }
@@ -14,7 +14,13 @@ export class ApiClientError extends Error {
     public statusText: string,
     public errorBody?: any
   ) {
-    super(`API request failed with status ${status} (${statusText})`);
+    let detail = '';
+    if (errorBody && typeof errorBody === 'object') {
+      detail = errorBody.message || errorBody.error || JSON.stringify(errorBody);
+    } else if (typeof errorBody === 'string') {
+      detail = errorBody;
+    }
+    super(detail || `Error ${status}: ${statusText || 'Respuesta fallida del servidor'}`);
     this.name = 'ApiClientError';
   }
 }
@@ -64,11 +70,17 @@ export async function apiClient<T>(
     cache: 'no-store',
   };
 
+  console.log(`[API Request] ${options.method || 'GET'} -> ${url}`, {
+    url,
+    headers: config.headers,
+    hasBody: !!options.body,
+  });
+
   try {
     const response = await fetch(url, config);
+    console.log(`[API Response] ${response.status} ${response.statusText} from ${url}`);
 
     if (response.status === 401) {
-      // Clear invalid credentials on 401
       setStoredAuthToken(null);
     }
 
@@ -79,6 +91,7 @@ export async function apiClient<T>(
       } catch {
         errorBody = await response.text();
       }
+      console.error(`[API Error ${response.status}] Details:`, errorBody);
       throw new ApiClientError(response.status, response.statusText, errorBody);
     }
 
@@ -86,16 +99,18 @@ export async function apiClient<T>(
       return null as T;
     }
 
-    return (await response.json()) as T;
+    const data = await response.json();
+    console.log(`[API Success] Payload:`, data);
+    return data as T;
   } catch (error) {
+    console.error(`[API Network Error] ${url}:`, error);
     if (error instanceof ApiClientError) {
       throw error;
     }
     throw new Error(
       error instanceof Error
         ? error.message
-        : 'Network or connection error contacting PREVENIA backend'
+        : 'Error de conexión o red con el backend de PREVENIA'
     );
   }
 }
-
