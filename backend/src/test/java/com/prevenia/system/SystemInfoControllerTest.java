@@ -30,7 +30,7 @@ class SystemInfoControllerTest {
         mockMvc.perform(get("/api/v1/system/info")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.application").value("PREVENIA"))
+                .andExpect(jsonPath("$.application").value("DMT-Soft"))
                 .andExpect(jsonPath("$.version").value("0.1.0"))
                 .andExpect(jsonPath("$.status").value("UP"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty());

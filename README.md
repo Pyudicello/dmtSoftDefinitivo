@@ -1,4 +1,4 @@
-# PREVENIA — Plataforma SaaS de Gestión de Higiene y Seguridad Laboral
+# DMT-Soft — Plataforma SaaS de Gestión de Higiene y Seguridad Laboral
 
 [![Java](https://img.shields.io/badge/Java-21%20LTS-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -10,13 +10,13 @@
 [![Flyway](https://img.shields.io/badge/Flyway-10-CC0200?logo=flyway&logoColor=white)](https://flywaydb.org/)
 [![Docker](https://img.shields.io/badge/Docker%20Compose-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
-**PREVENIA** es una solución SaaS multi-tenant diseñada para consultoras, profesionales y empresas del rubro de **Higiene y Seguridad Laboral**. Su propósito central es la gestión integral, auditoría y control proactivo de **vencimientos y obligaciones normativas recurrentes** (matafuegos, capacitaciones, coberturas de ART, visitas técnicas, inspecciones de ascensores y autoelevadores, protocolos de medición, seguros y planes de evacuación).
+**DMT-Soft** es una solución SaaS multi-tenant diseñada para consultoras, profesionales y empresas del rubro de **Higiene y Seguridad Laboral**. Su propósito central es la gestión integral, auditoría y control proactivo de **vencimientos y obligaciones normativas recurrentes** (matafuegos, capacitaciones, coberturas de ART, visitas técnicas, inspecciones de ascensores y autoelevadores, protocolos de medición, seguros y planes de evacuación).
 
 ---
 
-## 🏛️ Arquitectura del Sistema (Día 5 — Calendario y Experiencia Operativa)
+## 🏛️ Arquitectura del Sistema
 
-PREVENIA adopta una arquitectura de **Modular Monolith** orientada al dominio en el backend, con **Spring Security + JWT**, aislamiento multi-tenant estricto por `organization_id`, motor de clasificación temporal desacoplado mediante `java.time.Clock` inyectable, Centro de Alertas priorizadas y una aplicación web moderna en **Next.js 15 (App Router)** con **TanStack Query v5**:
+DMT-Soft adopta una arquitectura de **Modular Monolith** orientada al dominio en el backend, con **Spring Security + JWT**, aislamiento multi-tenant estricto por `organization_id`, motor de clasificación temporal desacoplado mediante `java.time.Clock` inyectable, Centro de Alertas priorizadas y una aplicación web moderna en **Next.js 15 (App Router)** con **TanStack Query v5**:
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -34,7 +34,7 @@ PREVENIA adopta una arquitectura de **Modular Monolith** orientada al dominio en
                             │ HTTP / REST / Authorization: Bearer <JWT>
                             ▼
 ┌────────────────────────────────────────────────────────┐
-│       PREVENIA Backend (Spring Boot 3.3.4)             │
+│       DMT-Soft Backend (Spring Boot 3.3.4)             │
 │                                                        │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │     auth     │  │ organization │  │     user     │  │
@@ -180,9 +180,9 @@ npm run build
 
 ---
 
-## ☁️ Día 6 — Infraestructura AWS y CI/CD
+## ☁️ Infraestructura AWS y CI/CD
 
-PREVENIA cuenta con una arquitectura de nube preparada para producción bajo el principio de **cero desperdicio, seguridad estricta y bajo costo** (~$25 - $48 USD/mes con presupuesto en AWS Budgets):
+DMT-Soft cuenta con una arquitectura de nube preparada para producción bajo el principio de **cero desperdicio, seguridad estricta y bajo costo** (~$25 - $48 USD/mes con presupuesto en AWS Budgets):
 
 * 📘 [docs/aws-costs.md](file:///docs/aws-costs.md) — Estimación detallada de costos por servicio, comparativa de regiones (`us-east-1` vs `sa-east-1`), estrategia de ahorro de NAT Gateway y configuración de AWS Budgets.
 * 📘 [docs/deployment.md](file:///docs/deployment.md) — Guía completa de aprovisionamiento, autenticación GitHub OIDC sin claves permanentes, bootstrapping del primer administrador y pipeline de despliegue continuo.

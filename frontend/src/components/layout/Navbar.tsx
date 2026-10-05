@@ -44,7 +44,7 @@ export function Navbar() {
             <Shield size={22} color="#ffffff" />
           </div>
           <div>
-            <span className="logo-title">PREVENIA</span>
+            <span className="logo-title">DMT-Soft</span>
           </div>
         </Link>
 

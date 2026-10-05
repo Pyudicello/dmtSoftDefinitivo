@@ -11,7 +11,7 @@ export const authService = {
     if (response.accessToken) {
       setStoredAuthToken(response.accessToken);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('prevenia_user', JSON.stringify(response.user));
+        localStorage.setItem('dmt_soft_user', JSON.stringify(response.user));
       }
     }
 
@@ -24,7 +24,7 @@ export const authService = {
 
   getStoredUser(): UserSummary | null {
     if (typeof window !== 'undefined') {
-      const userJson = localStorage.getItem('prevenia_user');
+      const userJson = localStorage.getItem('dmt_soft_user') || localStorage.getItem('prevenia_user');
       if (userJson) {
         try {
           return JSON.parse(userJson) as UserSummary;

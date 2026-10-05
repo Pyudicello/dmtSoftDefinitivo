@@ -148,7 +148,7 @@ public class InspectionIntegrationTest {
                 .companyId(COMPANY_MACRO_ID)
                 .type(InspectionType.HYGIENE_SAFETY_SERVICE)
                 .visitDate(LocalDate.now().minusDays(1))
-                .authority("Consultora Prevenia")
+                .authority("Consultora DMT-Soft")
                 .nextVisitDate(originalNextDate)
                 .build();
 
@@ -168,7 +168,7 @@ public class InspectionIntegrationTest {
         UpdateInspectionRequest updateRequest = UpdateInspectionRequest.builder()
                 .type(InspectionType.HYGIENE_SAFETY_SERVICE)
                 .visitDate(LocalDate.now())
-                .authority("Consultora Prevenia - Auditoría Semestral")
+                .authority("Consultora DMT-Soft - Auditoría Semestral")
                 .nextVisitDate(updatedNextDate)
                 .notes("Re-programada para dentro de 60 días.")
                 .build();
@@ -178,7 +178,7 @@ public class InspectionIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.authority", is("Consultora Prevenia - Auditoría Semestral")))
+                .andExpect(jsonPath("$.authority", is("Consultora DMT-Soft - Auditoría Semestral")))
                 .andExpect(jsonPath("$.nextVisitDate", is(updatedNextDate.toString())));
 
         // Check linked expiration updated
@@ -186,7 +186,7 @@ public class InspectionIntegrationTest {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.expirationDate", is(updatedNextDate.toString())))
-                .andExpect(jsonPath("$.title", is("Próxima Inspección: Servicio de Higiene y Seguridad - Consultora Prevenia - Auditoría Semestral")));
+                .andExpect(jsonPath("$.title", is("Próxima Inspección: Servicio de Higiene y Seguridad - Consultora DMT-Soft - Auditoría Semestral")));
     }
 
     @Test

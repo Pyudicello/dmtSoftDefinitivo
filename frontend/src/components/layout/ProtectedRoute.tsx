@@ -40,7 +40,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       >
         <RefreshCw size={28} className="animate-spin" color="#38bdf8" />
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Verificando sesión en PREVENIA...
+          Verificando sesión en DMT-Soft...
         </p>
       </div>
     );

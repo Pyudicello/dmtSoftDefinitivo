@@ -1,5 +1,5 @@
 /**
- * Date utility functions for PREVENIA.
+ * Date utility functions for DMT-Soft.
  * Treats LocalDate (YYYY-MM-DD) strings cleanly without timezone drifting.
  */
 

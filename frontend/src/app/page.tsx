@@ -36,7 +36,7 @@ export default function HomePage() {
           Plataforma SaaS • Higiene & Seguridad Laboral
         </div>
         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-primary)' }}>
-          PREVENIA
+          DMT-Soft
         </h1>
         <p style={{ maxWidth: '700px', margin: '0 auto 1.5rem', color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: 1.6 }}>
           Gestión integral de vencimientos, auditoría de obligaciones técnicas y control de clientes para consultoras de Higiene y Seguridad.
@@ -49,7 +49,7 @@ export default function HomePage() {
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.75rem 1.5rem', fontSize: '1rem' }}
           >
             <LogIn size={18} />
-            <span>Ingresar a PREVENIA</span>
+            <span>Ingresar a DMT-Soft</span>
             <ArrowRight size={18} />
           </Link>
           {isAuthenticated && (
@@ -206,7 +206,7 @@ export default function HomePage() {
       </div>
 
       <footer style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-        <p>PREVENIA SaaS © 2026 • Plataforma Profesional de Higiene & Seguridad Laboral</p>
+        <p>DMT-Soft SaaS © 2026 • Plataforma Profesional de Higiene & Seguridad Laboral</p>
       </footer>
     </main>
   );

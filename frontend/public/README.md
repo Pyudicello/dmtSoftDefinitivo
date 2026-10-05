@@ -1,1 +1,1 @@
-# Static assets directory for PREVENIA Frontend
+# Static assets directory for DMT-Soft Frontend

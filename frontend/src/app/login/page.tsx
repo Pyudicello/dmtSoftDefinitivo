@@ -98,7 +98,7 @@ function LoginForm() {
             <Shield size={24} color="#ffffff" />
           </div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            Ingresar a PREVENIA
+            Ingresar a DMT-Soft
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.2rem' }}>
             Plataforma SaaS • Higiene & Seguridad Laboral

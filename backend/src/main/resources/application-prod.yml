@@ -72,7 +72,7 @@ app:
       email: ${BOOTSTRAP_ADMIN_EMAIL:}
       password: ${BOOTSTRAP_ADMIN_PASSWORD:}
       first-name: ${BOOTSTRAP_ADMIN_FIRST_NAME:Admin}
-      last-name: ${BOOTSTRAP_ADMIN_LAST_NAME:Prevenia}
+      last-name: ${BOOTSTRAP_ADMIN_LAST_NAME:DMT-Soft}
       org-name: ${BOOTSTRAP_ADMIN_ORG_NAME:Consultora Principal}
       role: ${BOOTSTRAP_ADMIN_ROLE:CONSULTANT_ADMIN}
 

@@ -157,7 +157,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Shield size={19} color="#ffffff" />
               </div>
               <div>
-                <span className="logo-title" style={{ fontSize: '1.25rem' }}>PREVENIA</span>
+                <span className="logo-title" style={{ fontSize: '1.25rem' }}>DMT-Soft</span>
               </div>
             </Link>
 

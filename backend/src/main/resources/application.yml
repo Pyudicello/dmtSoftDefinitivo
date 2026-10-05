@@ -1,6 +1,6 @@
 spring:
   application:
-    name: prevenia-backend
+    name: dmt-soft-backend
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
   datasource:
@@ -46,7 +46,7 @@ management:
 
 app:
   info:
-    name: PREVENIA
+    name: DMT-Soft
     version: 0.1.0
     status: UP
   cors:
@@ -64,7 +64,7 @@ app:
       email: ${BOOTSTRAP_ADMIN_EMAIL:}
       password: ${BOOTSTRAP_ADMIN_PASSWORD:}
       first-name: ${BOOTSTRAP_ADMIN_FIRST_NAME:Admin}
-      last-name: ${BOOTSTRAP_ADMIN_LAST_NAME:Prevenia}
+      last-name: ${BOOTSTRAP_ADMIN_LAST_NAME:DMT-Soft}
       org-name: ${BOOTSTRAP_ADMIN_ORG_NAME:Consultora Principal}
       role: ${BOOTSTRAP_ADMIN_ROLE:CONSULTANT_ADMIN}
 

@@ -27,7 +27,7 @@ export class ApiClientError extends Error {
 
 export function getStoredAuthToken(): string | null {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('prevenia_token');
+    return localStorage.getItem('dmt_soft_token') || localStorage.getItem('prevenia_token');
   }
   return null;
 }
@@ -35,8 +35,10 @@ export function getStoredAuthToken(): string | null {
 export function setStoredAuthToken(token: string | null) {
   if (typeof window !== 'undefined') {
     if (token) {
-      localStorage.setItem('prevenia_token', token);
+      localStorage.setItem('dmt_soft_token', token);
     } else {
+      localStorage.removeItem('dmt_soft_token');
+      localStorage.removeItem('dmt_soft_user');
       localStorage.removeItem('prevenia_token');
       localStorage.removeItem('prevenia_user');
     }
@@ -110,7 +112,7 @@ export async function apiClient<T>(
     throw new Error(
       error instanceof Error
         ? error.message
-        : 'Error de conexión o red con el backend de PREVENIA'
+        : 'Error de conexión o red con el backend de DMT-Soft'
     );
   }
 }

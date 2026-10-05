@@ -532,7 +532,7 @@ function UsersContent() {
             }}
           >
             <span>Mostrando {filteredUsers.length} de {totalElements} usuarios</span>
-            <span>PREVENIA Multi-Tenant Security</span>
+            <span>DMT-Soft Multi-Tenant Security</span>
           </div>
         </div>
       )}

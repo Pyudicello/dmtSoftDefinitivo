@@ -343,7 +343,7 @@ export function InspectionModal({
                 </label>
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-                Si se acuerda una fecha futura, PREVENIA la integrará automáticamente al calendario, dashboard, alertas y listado general de vencimientos técnicos.
+                Si se acuerda una fecha futura, DMT-Soft la integrará automáticamente al calendario, dashboard, alertas y listado general de vencimientos técnicos.
               </p>
               <input
                 type="date"
