@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -153,8 +154,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               onClick={onClose}
               style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', textDecoration: 'none' }}
             >
-              <div className="logo-icon" style={{ width: '34px', height: '34px' }}>
-                <Shield size={19} color="#ffffff" />
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#ffffff',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 0 12px rgba(239, 68, 68, 0.35)',
+                flexShrink: 0
+              }}>
+                <Image src="/logo.png" alt="DMT-Soft Logo" width={36} height={36} priority style={{ objectFit: 'contain' }} />
               </div>
               <div>
                 <span className="logo-title" style={{ fontSize: '1.25rem' }}>DMT-Soft</span>

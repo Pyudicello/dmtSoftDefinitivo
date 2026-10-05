@@ -7,6 +7,11 @@ import { ToastProvider } from '@/context/ToastContext';
 export const metadata: Metadata = {
   title: 'DMT-Soft — Plataforma SaaS de Higiene y Seguridad Laboral',
   description: 'Gestión centralizada de vencimientos, empresas y seguridad multi-tenant para consultoras de Higiene y Seguridad.',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({

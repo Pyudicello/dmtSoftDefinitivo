@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import {
   Shield,
@@ -32,6 +33,21 @@ export default function HomePage() {
   return (
     <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1.5rem' }}>
       <section className="hero" style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+        <div style={{
+          margin: '0 auto 1.25rem',
+          width: '96px',
+          height: '96px',
+          borderRadius: '50%',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#ffffff',
+          border: '3px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 0 30px rgba(239, 68, 68, 0.45)'
+        }}>
+          <Image src="/logo.png" alt="DMT-Soft Logo" width={96} height={96} priority style={{ objectFit: 'contain' }} />
+        </div>
         <div className="hero-subtitle" style={{ display: 'inline-block', marginBottom: '0.75rem' }}>
           Plataforma SaaS • Higiene & Seguridad Laboral
         </div>

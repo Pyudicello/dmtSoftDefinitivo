@@ -2,6 +2,7 @@
 
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Shield, Lock, Mail, ArrowRight, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
@@ -94,8 +95,20 @@ function LoginForm() {
     <div style={{ maxWidth: '520px', margin: '2rem auto' }}>
       <div className="card" style={{ padding: '2rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-          <div className="logo-icon" style={{ margin: '0 auto 0.75rem', width: '46px', height: '46px' }}>
-            <Shield size={24} color="#ffffff" />
+          <div style={{
+            margin: '0 auto 1rem',
+            width: '72px',
+            height: '72px',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#ffffff',
+            border: '3px solid rgba(255, 255, 255, 0.25)',
+            boxShadow: '0 0 20px rgba(239, 68, 68, 0.4)'
+          }}>
+            <Image src="/logo.png" alt="DMT-Soft Logo" width={72} height={72} priority style={{ objectFit: 'contain' }} />
           </div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)' }}>
             Ingresar a DMT-Soft

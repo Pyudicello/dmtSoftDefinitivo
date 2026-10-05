@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Shield, Building2, LogOut, LogIn, User as UserIcon, Activity, Clock } from 'lucide-react';
@@ -40,8 +41,20 @@ export function Navbar() {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
-          <div className="logo-icon">
-            <Shield size={22} color="#ffffff" />
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#ffffff',
+            border: '2px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 0 12px rgba(239, 68, 68, 0.35)',
+            flexShrink: 0
+          }}>
+            <Image src="/logo.png" alt="DMT-Soft Logo" width={36} height={36} priority style={{ objectFit: 'contain' }} />
           </div>
           <div>
             <span className="logo-title">DMT-Soft</span>
