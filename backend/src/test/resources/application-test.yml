@@ -30,3 +30,6 @@ app:
   expiration:
     urgent-days: 7
     upcoming-days: 30
+  bootstrap:
+    admin:
+      enabled: false

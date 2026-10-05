@@ -10,9 +10,13 @@ import org.springframework.test.context.TestPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.TestPropertySource;
+
 @SpringBootTest
 @ActiveProfiles("test")
 @TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:flyway_migration_test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class FlywayMigrationTest {
 
     @Autowired
