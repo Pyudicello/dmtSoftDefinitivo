@@ -101,6 +101,18 @@ header {
   letter-spacing: 0.05em;
 }
 
+.landing-grid-2x2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .landing-grid-2x2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 .hero {
   margin-bottom: 3rem;
   text-align: left;

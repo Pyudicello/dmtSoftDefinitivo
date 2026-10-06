@@ -140,17 +140,19 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Correo Electrónico</label>
+            <label className="form-label">Usuario o Correo Electrónico</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Mail size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '0.85rem' }} />
               <input
-                type="email"
+                type="text"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="ejemplo@demo.com"
+                placeholder="julioRodriguez o tu@email.com"
                 className="form-input"
                 style={{ paddingLeft: '2.4rem' }}
+                autoCapitalize="none"
+                autoCorrect="off"
               />
             </div>
           </div>

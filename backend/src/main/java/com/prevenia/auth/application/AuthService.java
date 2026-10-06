@@ -27,9 +27,12 @@ public class AuthService {
     public LoginResponse authenticate(LoginRequest request) {
         log.debug("Authentication attempt for email: {}", request.getEmail());
 
-        User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
+        String input = request.getEmail().trim().toLowerCase();
+        User user = userRepository.findByEmail(input)
+                .or(() -> userRepository.findByEmail(input + "@dmtsoft.com"))
+                .or(() -> userRepository.findByEmail(input + "@dmt-soft.com"))
                 .orElseThrow(() -> {
-                    log.warn("Authentication failed: user with email {} not found", request.getEmail());
+                    log.warn("Authentication failed: user {} not found", request.getEmail());
                     return new UnauthorizedException("Invalid email or password");
                 });
 
