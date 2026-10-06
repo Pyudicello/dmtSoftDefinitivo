@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -46,6 +47,9 @@ public class InspectionIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private Clock clock;
 
     private static final UUID COMPANY_MACRO_ID = UUID.fromString("33333333-3333-3333-3333-333333333331");
     private static final UUID COMPANY_TECHCORP_ORG_B_ID = UUID.fromString("33333333-3333-3333-3333-333333333334");
@@ -80,10 +84,11 @@ public class InspectionIntegrationTest {
     @Test
     @DisplayName("Create inspection without nextVisitDate should not generate an expiration")
     void createInspection_withoutNextVisitDate_success() throws Exception {
+        LocalDate today = LocalDate.now(clock);
         CreateInspectionRequest request = CreateInspectionRequest.builder()
                 .companyId(COMPANY_MACRO_ID)
                 .type(InspectionType.ART)
-                .visitDate(LocalDate.now().minusDays(5))
+                .visitDate(today.minusDays(5))
                 .authority("Prevención ART")
                 .contactName("Ing. Gómez")
                 .contactPhone("11-5555-1234")
@@ -106,11 +111,12 @@ public class InspectionIntegrationTest {
     @Test
     @DisplayName("Create inspection with nextVisitDate synchronizes with Expiration engine")
     void createInspection_withNextVisitDate_syncsExpirationEngine() throws Exception {
-        LocalDate nextDate = LocalDate.now().plusDays(45);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate nextDate = today.plusDays(45);
         CreateInspectionRequest request = CreateInspectionRequest.builder()
                 .companyId(COMPANY_MACRO_ID)
                 .type(InspectionType.MUNICIPAL)
-                .visitDate(LocalDate.now().minusDays(2))
+                .visitDate(today.minusDays(2))
                 .authority("Municipalidad de Vicente López")
                 .contactName("Inspector Ramírez")
                 .result("Inspección de condiciones edilicias y matafuegos aprobada.")
@@ -143,11 +149,12 @@ public class InspectionIntegrationTest {
     @Test
     @DisplayName("Updating nextVisitDate on inspection updates linked Expiration")
     void updateInspection_updatesLinkedExpiration() throws Exception {
-        LocalDate originalNextDate = LocalDate.now().plusDays(20);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate originalNextDate = today.plusDays(20);
         CreateInspectionRequest createRequest = CreateInspectionRequest.builder()
                 .companyId(COMPANY_MACRO_ID)
                 .type(InspectionType.HYGIENE_SAFETY_SERVICE)
-                .visitDate(LocalDate.now().minusDays(1))
+                .visitDate(today.minusDays(1))
                 .authority("Consultora DMT-Soft")
                 .nextVisitDate(originalNextDate)
                 .build();
@@ -164,10 +171,10 @@ public class InspectionIntegrationTest {
         String expirationId = createdJson.get("expirationId").asText();
 
         // Update with new nextVisitDate
-        LocalDate updatedNextDate = LocalDate.now().plusDays(60);
+        LocalDate updatedNextDate = today.plusDays(60);
         UpdateInspectionRequest updateRequest = UpdateInspectionRequest.builder()
                 .type(InspectionType.HYGIENE_SAFETY_SERVICE)
-                .visitDate(LocalDate.now())
+                .visitDate(today)
                 .authority("Consultora DMT-Soft - Auditoría Semestral")
                 .nextVisitDate(updatedNextDate)
                 .notes("Re-programada para dentro de 60 días.")
@@ -192,12 +199,13 @@ public class InspectionIntegrationTest {
     @Test
     @DisplayName("Deleting an inspection cancels linked Expiration in the core engine")
     void deleteInspection_cancelsLinkedExpiration() throws Exception {
+        LocalDate today = LocalDate.now(clock);
         CreateInspectionRequest createRequest = CreateInspectionRequest.builder()
                 .companyId(COMPANY_MACRO_ID)
                 .type(InspectionType.PROVINCIAL)
-                .visitDate(LocalDate.now().minusDays(3))
+                .visitDate(today.minusDays(3))
                 .authority("Ministerio de Trabajo PBA")
-                .nextVisitDate(LocalDate.now().plusDays(10))
+                .nextVisitDate(today.plusDays(10))
                 .build();
 
         MvcResult createResult = mockMvc.perform(post("/api/v1/inspections")
@@ -226,10 +234,11 @@ public class InspectionIntegrationTest {
     @Test
     @DisplayName("Client user cannot create or delete inspections (Forbidden)")
     void clientUser_cannotWriteInspections() throws Exception {
+        LocalDate today = LocalDate.now(clock);
         CreateInspectionRequest request = CreateInspectionRequest.builder()
                 .companyId(COMPANY_MACRO_ID)
                 .type(InspectionType.ART)
-                .visitDate(LocalDate.now())
+                .visitDate(today)
                 .authority("Prevención ART")
                 .build();
 
@@ -243,10 +252,11 @@ public class InspectionIntegrationTest {
     @Test
     @DisplayName("Cross-tenant inspection access is rejected (404 / IDOR protection)")
     void crossTenantInspection_isRejected() throws Exception {
+        LocalDate today = LocalDate.now(clock);
         CreateInspectionRequest request = CreateInspectionRequest.builder()
                 .companyId(COMPANY_TECHCORP_ORG_B_ID)
                 .type(InspectionType.MUNICIPAL)
-                .visitDate(LocalDate.now())
+                .visitDate(today)
                 .authority("Municipalidad de Córdoba")
                 .build();
 

@@ -23,6 +23,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -49,6 +50,9 @@ public class PermitIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private Clock clock;
 
     private static final UUID COMPANY_MACRO_ID = UUID.fromString("33333333-3333-3333-3333-333333333331");
     private static final UUID COMPANY_TECHCORP_ORG_B_ID = UUID.fromString("33333333-3333-3333-3333-333333333334");
@@ -83,8 +87,9 @@ public class PermitIntegrationTest {
     @Test
     @DisplayName("Create permit integrates with Expiration engine and calculates deadline status")
     void createPermit_integratesWithExpirationEngine() throws Exception {
-        LocalDate issueDate = LocalDate.now().minusMonths(6);
-        LocalDate expirationDate = LocalDate.now().plusMonths(6);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate issueDate = today.minusMonths(6);
+        LocalDate expirationDate = today.plusMonths(6);
 
         CreatePermitRequest request = CreatePermitRequest.builder()
                 .companyId(COMPANY_MACRO_ID)
@@ -125,8 +130,9 @@ public class PermitIntegrationTest {
     @Test
     @DisplayName("Permit with near expiration date classifies as URGENT or UPCOMING correctly")
     void permit_urgentDeadlineStatus() throws Exception {
-        LocalDate issueDate = LocalDate.now().minusYears(1);
-        LocalDate expirationDate = LocalDate.now().plusDays(5); // <= 7 days -> URGENT
+        LocalDate today = LocalDate.now(clock);
+        LocalDate issueDate = today.minusYears(1);
+        LocalDate expirationDate = today.plusDays(5); // <= 7 days -> URGENT
 
         CreatePermitRequest request = CreatePermitRequest.builder()
                 .companyId(COMPANY_MACRO_ID)
@@ -149,9 +155,10 @@ public class PermitIntegrationTest {
     @Test
     @DisplayName("Renewing a permit archives the previous permit and preserves history")
     void renewPermit_preservesHistoryAndCompletesPreviousExpiration() throws Exception {
+        LocalDate today = LocalDate.now(clock);
         // 1. Create initial permit
-        LocalDate oldIssue = LocalDate.now().minusYears(1);
-        LocalDate oldExp = LocalDate.now().minusDays(1); // expired yesterday
+        LocalDate oldIssue = today.minusYears(1);
+        LocalDate oldExp = today.minusDays(1); // expired yesterday
 
         CreatePermitRequest initialReq = CreatePermitRequest.builder()
                 .companyId(COMPANY_MACRO_ID)
@@ -174,8 +181,8 @@ public class PermitIntegrationTest {
         String initialExpirationId = initialJson.get("expirationId").asText();
 
         // 2. Renew the permit
-        LocalDate newIssue = LocalDate.now();
-        LocalDate newExp = LocalDate.now().plusYears(2);
+        LocalDate newIssue = today;
+        LocalDate newExp = today.plusYears(2);
 
         RenewPermitRequest renewReq = RenewPermitRequest.builder()
                 .permitNumber("OPDS-2026-02")
@@ -220,13 +227,14 @@ public class PermitIntegrationTest {
     @Test
     @DisplayName("Cancelling a permit sets status to CANCELLED and cancels linked expiration")
     void cancelPermit_cancelsLinkedExpiration() throws Exception {
+        LocalDate today = LocalDate.now(clock);
         CreatePermitRequest request = CreatePermitRequest.builder()
                 .companyId(COMPANY_MACRO_ID)
                 .type(PermitType.OTHER)
                 .issuingAuthority("Prefectura Naval Argentina")
                 .permitNumber("PNA-2026-77")
-                .issueDate(LocalDate.now().minusMonths(1))
-                .expirationDate(LocalDate.now().plusMonths(5))
+                .issueDate(today.minusMonths(1))
+                .expirationDate(today.plusMonths(5))
                 .build();
 
         MvcResult createResult = mockMvc.perform(post("/api/v1/permits")
@@ -262,13 +270,14 @@ public class PermitIntegrationTest {
     @Test
     @DisplayName("Client user cannot create or renew permits")
     void clientUser_cannotWritePermits() throws Exception {
+        LocalDate today = LocalDate.now(clock);
         CreatePermitRequest request = CreatePermitRequest.builder()
                 .companyId(COMPANY_MACRO_ID)
                 .type(PermitType.MUNICIPAL)
                 .issuingAuthority("Municipalidad")
                 .permitNumber("HAB-1")
-                .issueDate(LocalDate.now())
-                .expirationDate(LocalDate.now().plusYears(1))
+                .issueDate(today)
+                .expirationDate(today.plusYears(1))
                 .build();
 
         mockMvc.perform(post("/api/v1/permits")
@@ -281,13 +290,14 @@ public class PermitIntegrationTest {
     @Test
     @DisplayName("Cross-tenant permit write is rejected with 404")
     void crossTenantPermit_isRejected() throws Exception {
+        LocalDate today = LocalDate.now(clock);
         CreatePermitRequest request = CreatePermitRequest.builder()
                 .companyId(COMPANY_TECHCORP_ORG_B_ID)
                 .type(PermitType.MUNICIPAL)
                 .issuingAuthority("Municipalidad de Córdoba")
                 .permitNumber("HAB-COR-99")
-                .issueDate(LocalDate.now())
-                .expirationDate(LocalDate.now().plusYears(1))
+                .issueDate(today)
+                .expirationDate(today.plusYears(1))
                 .build();
 
         mockMvc.perform(post("/api/v1/permits")
