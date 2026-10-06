@@ -6,22 +6,20 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Shield,
-  Users,
-  Building2,
-  Lock,
-  ArrowRight,
   ShieldCheck,
-  CheckCircle2,
   Clock,
-  AlertTriangle,
-  CheckCircle,
+  ClipboardCheck,
+  Building2,
+  BellRing,
+  FileCheck2,
+  ArrowRight,
+  LogIn,
   LayoutDashboard,
-  LogIn
+  CheckCircle2
 } from 'lucide-react';
 
 export default function HomePage() {
-  const { user, role, isAuthenticated, quickLoginAs, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -31,48 +29,96 @@ export default function HomePage() {
   }, [isLoading, isAuthenticated, router]);
 
   return (
-    <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-      <section className="hero" style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+    <main style={{ maxWidth: '1080px', margin: '0 auto', padding: '2.5rem 1.5rem' }}>
+      {/* Hero Header */}
+      <section className="hero" style={{ textAlign: 'center', marginBottom: '3rem' }}>
         <div style={{
-          margin: '0 auto 1.25rem',
-          width: '96px',
-          height: '96px',
+          margin: '0 auto 1.5rem',
+          width: '100px',
+          height: '100px',
           borderRadius: '50%',
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           background: '#ffffff',
-          border: '3px solid rgba(255, 255, 255, 0.3)',
-          boxShadow: '0 0 30px rgba(239, 68, 68, 0.45)'
+          border: '3px solid rgba(255, 255, 255, 0.4)',
+          boxShadow: '0 0 35px rgba(239, 68, 68, 0.45)'
         }}>
-          <Image src="/logo.png" alt="DMT-Soft Logo" width={96} height={96} priority style={{ objectFit: 'contain' }} />
+          <Image src="/logo.png" alt="DMT-Soft Logo" width={100} height={100} priority style={{ objectFit: 'contain' }} />
         </div>
-        <div className="hero-subtitle" style={{ display: 'inline-block', marginBottom: '0.75rem' }}>
-          Plataforma SaaS • Higiene & Seguridad Laboral
+
+        <div className="hero-subtitle" style={{
+          display: 'inline-block',
+          marginBottom: '0.85rem',
+          fontSize: '0.85rem',
+          letterSpacing: '0.08em',
+          fontWeight: 700,
+          color: '#38bdf8'
+        }}>
+          PLATAFORMA SAAS • HIGIENE & SEGURIDAD LABORAL
         </div>
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+
+        <h1 style={{
+          fontSize: '2.8rem',
+          fontWeight: 800,
+          marginBottom: '1rem',
+          color: '#ffffff',
+          letterSpacing: '-0.02em'
+        }}>
           DMT-Soft
         </h1>
-        <p style={{ maxWidth: '700px', margin: '0 auto 1.5rem', color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: 1.6 }}>
-          Gestión integral de vencimientos, auditoría de obligaciones técnicas y control de clientes para consultoras de Higiene y Seguridad.
+
+        <p style={{
+          maxWidth: '720px',
+          margin: '0 auto 2rem',
+          color: 'var(--text-secondary)',
+          fontSize: '1.15rem',
+          lineHeight: 1.6
+        }}>
+          Plataforma integral para consultoras y profesionales. Control proactivo de obligaciones normativas, auditoría de vencimientos y gestión centralizada de clientes.
         </p>
 
+        {/* Enhanced High-Contrast CTA Button */}
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link
             href="/login"
-            className="btn btn-primary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              textDecoration: 'none',
+              padding: '0.9rem 2.2rem',
+              fontSize: '1.05rem',
+              fontWeight: 700,
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 50%, #2563eb 100%)',
+              color: '#ffffff',
+              boxShadow: '0 4px 25px rgba(6, 182, 212, 0.5), 0 0 15px rgba(2, 132, 199, 0.35)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              cursor: 'pointer',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+            }}
           >
-            <LogIn size={18} />
+            <LogIn size={20} color="#ffffff" />
             <span>Ingresar a DMT-Soft</span>
-            <ArrowRight size={18} />
+            <ArrowRight size={20} color="#ffffff" />
           </Link>
+
           {isAuthenticated && (
             <Link
               href="/dashboard"
               className="btn btn-secondary"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                textDecoration: 'none',
+                padding: '0.9rem 1.75rem',
+                fontSize: '1rem',
+                fontWeight: 600,
+                borderRadius: '10px',
+              }}
             >
               <LayoutDashboard size={18} />
               <span>Ir al Dashboard</span>
@@ -81,149 +127,196 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Role Testing Quick Matrix (Local & Development only) */}
-      {process.env.NEXT_PUBLIC_APP_ENV !== 'production' && (
-        <div className="card" style={{ marginBottom: '2rem', border: '1px solid var(--border-accent)' }}>
-          <div className="card-header">
-            <div className="card-title">
-              <Lock size={20} color="#38bdf8" />
-              <span>Acceso Rápido por Rol (Demostración y Testing)</span>
+      {/* Single Comprehensive Client-Facing Feature Card */}
+      <section style={{ marginBottom: '3rem' }}>
+        <div className="card" style={{
+          padding: '2.25rem',
+          background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(13, 19, 31, 0.95) 100%)',
+          border: '1px solid rgba(56, 189, 248, 0.25)',
+          borderRadius: '16px',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.45)'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.35rem 0.85rem',
+              borderRadius: '9999px',
+              background: 'rgba(56, 189, 248, 0.12)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              color: '#38bdf8',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              marginBottom: '0.75rem'
+            }}>
+              <ShieldCheck size={16} />
+              <span>¿Qué ofrece DMT-Soft a tu empresa?</span>
             </div>
-            {isAuthenticated && user && (
-              <span className="status-badge status-up">
-                Conectado como: {user.role} ({user.email})
-              </span>
-            )}
+            <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+              Control Total y Cumplimiento Normativo en Higiene & Seguridad
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.4rem', maxWidth: '680px', margin: '0.4rem auto 0' }}>
+              Una solución centralizada para garantizar que ninguna obligación legal, técnica o preventiva quede desatendida.
+            </p>
           </div>
 
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '1.25rem' }}>
-            Hacé click en cualquiera de los roles para autenticarte instantáneamente y acceder al Dashboard con su ámbito de autorización:
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-            <div style={{ padding: '1rem', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '8px' }}>
-              <div style={{ fontWeight: 700, color: '#93c5fd', fontSize: '0.9rem' }}>1. Consultor Admin A</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-                Scope completo de Consultora A (Macro, Andreani, Coca-Cola). CRUD de empresas y vencimientos.
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '1.5rem',
+          }}>
+            {/* Feature 1 */}
+            <div style={{
+              padding: '1.25rem',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.6rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#38bdf8'
+                }}>
+                  <Clock size={20} />
+                </div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                  Control de Vencimientos
+                </h3>
               </div>
-              <button
-                onClick={async () => {
-                  await quickLoginAs('admin@demo.com', 'Demo1234!');
-                  router.push('/dashboard');
-                }}
-                className="btn-refresh"
-                style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem' }}
-              >
-                <span>Ingresar como Admin A</span>
-              </button>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', lineHeight: 1.5, margin: 0 }}>
+                Seguimiento continuo de matafuegos, capacitaciones, coberturas de ART, protocolos de medición y análisis periódicos con semáforos temporales automáticos.
+              </p>
             </div>
 
-            <div style={{ padding: '1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '8px' }}>
-              <div style={{ fontWeight: 700, color: '#fcd34d', fontSize: '0.9rem' }}>2. Técnico Carlos</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-                Opera solo en empresas asignadas (Macro, Andreani). Protección anti-IDOR 404 para Coca-Cola.
+            {/* Feature 2 */}
+            <div style={{
+              padding: '1.25rem',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.6rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: 'rgba(249, 115, 22, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fb923c'
+                }}>
+                  <BellRing size={20} />
+                </div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                  Alertas y Prevención
+                </h3>
               </div>
-              <button
-                onClick={async () => {
-                  await quickLoginAs('carlos@demo.com', 'Demo1234!');
-                  router.push('/dashboard');
-                }}
-                className="btn-refresh"
-                style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(245, 158, 11, 0.3)', color: '#fcd34d' }}
-              >
-                <span>Ingresar como Técnico</span>
-              </button>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', lineHeight: 1.5, margin: 0 }}>
+                Notificaciones priorizadas por urgencia (críticas, próximas y vigentes) para anticiparse a los plazos legales y evitar sanciones o clausuras.
+              </p>
             </div>
 
-            <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px' }}>
-              <div style={{ fontWeight: 700, color: '#6ee7b7', fontSize: '0.9rem' }}>3. Cliente Macro</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-                Solo lectura de su empresa Banco Macro. Acciones de creación/edición bloqueadas.
+            {/* Feature 3 */}
+            <div style={{
+              padding: '1.25rem',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.6rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: 'rgba(52, 211, 153, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#34d399'
+                }}>
+                  <ClipboardCheck size={20} />
+                </div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                  Auditoría e Inspecciones
+                </h3>
               </div>
-              <button
-                onClick={async () => {
-                  await quickLoginAs('macro@demo.com', 'Demo1234!');
-                  router.push('/dashboard');
-                }}
-                className="btn-refresh"
-                style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(16, 185, 129, 0.3)', color: '#6ee7b7' }}
-              >
-                <span>Ingresar como Cliente</span>
-              </button>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', lineHeight: 1.5, margin: 0 }}>
+                Registro digital y trazabilidad de visitas a planta, habilitaciones técnicas y controles periódicos por establecimiento con historial detallado.
+              </p>
             </div>
 
-            <div style={{ padding: '1rem', background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.2)', borderRadius: '8px' }}>
-              <div style={{ fontWeight: 700, color: '#f472b6', fontSize: '0.9rem' }}>4. Admin Org B (Cross-Tenant)</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0.75rem' }}>
-                Consultora B. Aislamiento estricto: no puede ver ni consultar datos de la Consultora A.
+            {/* Feature 4 */}
+            <div style={{
+              padding: '1.25rem',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.6rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: 'rgba(168, 85, 247, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#c084fc'
+                }}>
+                  <Building2 size={20} />
+                </div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                  Portal para Clientes
+                </h3>
               </div>
-              <button
-                onClick={async () => {
-                  await quickLoginAs('admin.b@demo.com', 'Demo1234!');
-                  router.push('/dashboard');
-                }}
-                className="btn-refresh"
-                style={{ width: '100%', justifyContent: 'center', fontSize: '0.78rem', borderColor: 'rgba(236, 72, 153, 0.3)', color: '#f472b6' }}
-              >
-                <span>Ingresar como Org B</span>
-              </button>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', lineHeight: 1.5, margin: 0 }}>
+                Acceso dedicado y seguro para que las empresas clientes consulten su estado de cumplimiento, cronograma de visitas y documentación 100% al día.
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            marginTop: '1.75rem',
+            paddingTop: '1.25rem',
+            borderTop: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '1.5rem',
+            flexWrap: 'wrap',
+            fontSize: '0.84rem',
+            color: 'var(--text-secondary)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <CheckCircle2 size={16} color="#34d399" />
+              <span>Aislamiento seguro multi-empresa</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <CheckCircle2 size={16} color="#34d399" />
+              <span>Acceso en la nube 24/7</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <CheckCircle2 size={16} color="#34d399" />
+              <span>Trazabilidad y auditoría completa</span>
             </div>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* Feature Highlights */}
-      <div className="grid" style={{ marginBottom: '2rem' }}>
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">
-              <ShieldCheck size={20} color="#34d399" />
-              <span>Arquitectura & Seguridad</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.86rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <CheckCircle2 size={16} color="#34d399" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-              <div><strong>Multi-tenancy Estricto:</strong> Aislamiento garantizado en backend vía JPA y TenantContext.</div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <CheckCircle2 size={16} color="#34d399" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-              <div><strong>Autorización por Roles:</strong> Matriz PLATFORM_ADMIN, CONSULTANT_ADMIN, TECHNICIAN, CLIENT.</div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <CheckCircle2 size={16} color="#34d399" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-              <div><strong>Prevención IDOR:</strong> Recursos no autorizados devuelven 404 Not Found para evitar enumeración.</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">
-              <Clock size={20} color="#38bdf8" />
-              <span>Motor de Vencimientos</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.86rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <CheckCircle2 size={16} color="#38bdf8" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-              <div><strong>Clasificación Dinámica:</strong> EXPIRED, URGENT (≤7d), UPCOMING (8-30d), CURRENT (&gt;30d).</div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <CheckCircle2 size={16} color="#38bdf8" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-              <div><strong>Ciclo de Vida:</strong> ACTIVE, COMPLETED, CANCELLED con auditoría de usuario y timestamp.</div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <CheckCircle2 size={16} color="#38bdf8" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-              <div><strong>TanStack Query Cache:</strong> Invalidaciones automáticas tras mutaciones para consistencia total.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <footer style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-        <p>DMT-Soft SaaS © 2026 • Plataforma Profesional de Higiene & Seguridad Laboral</p>
+      <footer style={{ textAlign: 'center', padding: '1.5rem 0 2rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+        <p>DMT-Soft SaaS © 2026 • Consultores - Servicios Integrales</p>
       </footer>
     </main>
   );
 }
+
