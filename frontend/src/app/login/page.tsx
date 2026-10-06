@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Shield, Lock, Mail, ArrowRight, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
+import { Shield, Lock, Mail, User, ArrowRight, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
 
 function LoginForm() {
   const router = useRouter();
@@ -140,15 +140,15 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Usuario o Correo Electrónico</label>
+            <label className="form-label">Usuario</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Mail size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '0.85rem' }} />
+              <User size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '0.85rem' }} />
               <input
                 type="text"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="julioRodriguez o tu@email.com"
+                placeholder="Usuario"
                 className="form-input"
                 style={{ paddingLeft: '2.4rem' }}
                 autoCapitalize="none"
