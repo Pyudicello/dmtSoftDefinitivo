@@ -24,7 +24,7 @@ VALUES
 -- Password hash: $2a$10$Kbdrl6YvoqxHij5DS0oUqe.l.hAcn0sRMKzabxRRqU0k9TnLHT0MS (Admin1234!)
 INSERT INTO users (id, organization_id, company_id, first_name, last_name, email, password_hash, role, status, created_at, updated_at)
 VALUES
-    ('22222222-2222-2222-2222-222222222220', NULL, NULL, 'Super', 'Admin', 'platform@prevenia.com', '$2a$10$Kbdrl6YvoqxHij5DS0oUqe.l.hAcn0sRMKzabxRRqU0k9TnLHT0MS', 'PLATFORM_ADMIN', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('22222222-2222-2222-2222-222222222220', NULL, NULL, 'Julio', 'Rodríguez', 'juliorodriguez@dmtsoft.com', '$2a$10$RUBlm.GW4GtT./ChJ7ThxOZxqky6itlreK3WiUbTeRs2GR4riuckq', 'PLATFORM_ADMIN', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('22222222-2222-2222-2222-222222222221', '11111111-1111-1111-1111-111111111111', NULL, 'Ana', 'Gutiérrez', 'admin@demo.com', '$2a$10$RUBlm.GW4GtT./ChJ7ThxOZxqky6itlreK3WiUbTeRs2GR4riuckq', 'CONSULTANT_ADMIN', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', NULL, 'Carlos', 'Pérez', 'carlos@demo.com', '$2a$10$RUBlm.GW4GtT./ChJ7ThxOZxqky6itlreK3WiUbTeRs2GR4riuckq', 'TECHNICIAN', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('22222222-2222-2222-2222-222222222223', '11111111-1111-1111-1111-111111111111', NULL, 'Martín', 'López', 'martin@demo.com', '$2a$10$RUBlm.GW4GtT./ChJ7ThxOZxqky6itlreK3WiUbTeRs2GR4riuckq', 'TECHNICIAN', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
