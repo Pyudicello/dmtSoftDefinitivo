@@ -2,10 +2,15 @@ import { apiClient, setStoredAuthToken } from '@/lib/api-client';
 import { LoginResponse, UserSummary } from '@/types';
 
 export const authService = {
-  async login(email: string, password: string): Promise<LoginResponse> {
+  async login(emailOrUsername: string, password: string): Promise<LoginResponse> {
+    const trimmed = emailOrUsername.trim();
+    const normalizedEmail = trimmed.includes('@')
+      ? trimmed.toLowerCase()
+      : `${trimmed.toLowerCase()}@dmtsoft.com`;
+
     const response = await apiClient<LoginResponse>('/api/v1/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: normalizedEmail, password }),
     });
 
     if (response.accessToken) {

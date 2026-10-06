@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Shield, Building2, LogOut, LogIn, User as UserIcon, Activity, Clock } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export function Navbar() {
   const { user, role, isAuthenticated, logout } = useAuth();
@@ -115,7 +116,9 @@ export function Navbar() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <ThemeToggle />
+
         {isAuthenticated && user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.8rem' }}>

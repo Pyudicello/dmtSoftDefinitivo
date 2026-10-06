@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Shield, Lock, Mail, User, ArrowRight, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 function LoginForm() {
   const router = useRouter();
@@ -26,7 +27,7 @@ function LoginForm() {
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      setError('El correo electrónico es requerido');
+      setError('El usuario o correo electrónico es requerido');
       return;
     }
     if (!password) {
@@ -93,6 +94,10 @@ function LoginForm() {
 
   return (
     <div style={{ maxWidth: '520px', margin: '2rem auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+        <ThemeToggle showLabel={true} />
+      </div>
+
       <div className="card" style={{ padding: '2rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <div style={{

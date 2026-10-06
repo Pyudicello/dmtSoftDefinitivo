@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   CheckCircle2
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -29,7 +30,12 @@ export default function HomePage() {
   }, [isLoading, isAuthenticated, router]);
 
   return (
-    <main style={{ maxWidth: '1080px', margin: '0 auto', padding: '2.5rem 1.5rem' }}>
+    <main style={{ maxWidth: '1080px', margin: '0 auto', padding: '1.5rem 1.5rem 3rem' }}>
+      {/* Top Header with ThemeToggle */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+        <ThemeToggle showLabel={true} />
+      </div>
+
       {/* Hero Header */}
       <section className="hero" style={{ textAlign: 'center', marginBottom: '3rem' }}>
         <div style={{
@@ -54,7 +60,7 @@ export default function HomePage() {
           fontSize: '0.85rem',
           letterSpacing: '0.08em',
           fontWeight: 700,
-          color: '#38bdf8'
+          color: 'var(--accent-cyan)'
         }}>
           PLATAFORMA SAAS • HIGIENE & SEGURIDAD LABORAL
         </div>
@@ -63,7 +69,7 @@ export default function HomePage() {
           fontSize: '2.8rem',
           fontWeight: 800,
           marginBottom: '1rem',
-          color: '#ffffff',
+          color: 'var(--text-primary)',
           letterSpacing: '-0.02em'
         }}>
           DMT-Soft
@@ -131,10 +137,10 @@ export default function HomePage() {
       <section style={{ marginBottom: '3rem' }}>
         <div className="card" style={{
           padding: '2.25rem',
-          background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(13, 19, 31, 0.95) 100%)',
-          border: '1px solid rgba(56, 189, 248, 0.25)',
+          background: 'var(--landing-card-bg)',
+          border: '1px solid var(--border-accent)',
           borderRadius: '16px',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.45)'
+          boxShadow: 'var(--shadow-subtle)'
         }}>
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <div style={{
@@ -145,7 +151,7 @@ export default function HomePage() {
               borderRadius: '9999px',
               background: 'rgba(56, 189, 248, 0.12)',
               border: '1px solid rgba(56, 189, 248, 0.3)',
-              color: '#38bdf8',
+              color: 'var(--accent-cyan)',
               fontSize: '0.8rem',
               fontWeight: 700,
               textTransform: 'uppercase',
@@ -167,7 +173,7 @@ export default function HomePage() {
             {/* Feature 1 */}
             <div style={{
               padding: '1.25rem',
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: 'var(--landing-inner-bg)',
               borderRadius: '12px',
               border: '1px solid var(--border-color)',
             }}>
@@ -180,11 +186,11 @@ export default function HomePage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#38bdf8'
+                  color: 'var(--accent-cyan)'
                 }}>
                   <Clock size={20} />
                 </div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                   Control de Vencimientos
                 </h3>
               </div>
@@ -196,7 +202,7 @@ export default function HomePage() {
             {/* Feature 2 */}
             <div style={{
               padding: '1.25rem',
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: 'var(--landing-inner-bg)',
               borderRadius: '12px',
               border: '1px solid var(--border-color)',
             }}>
@@ -213,7 +219,7 @@ export default function HomePage() {
                 }}>
                   <BellRing size={20} />
                 </div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                   Alertas y Prevención
                 </h3>
               </div>
@@ -225,7 +231,7 @@ export default function HomePage() {
             {/* Feature 3 */}
             <div style={{
               padding: '1.25rem',
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: 'var(--landing-inner-bg)',
               borderRadius: '12px',
               border: '1px solid var(--border-color)',
             }}>
@@ -242,7 +248,7 @@ export default function HomePage() {
                 }}>
                   <ClipboardCheck size={20} />
                 </div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                   Auditoría e Inspecciones
                 </h3>
               </div>
@@ -254,7 +260,7 @@ export default function HomePage() {
             {/* Feature 4 */}
             <div style={{
               padding: '1.25rem',
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: 'var(--landing-inner-bg)',
               borderRadius: '12px',
               border: '1px solid var(--border-color)',
             }}>
@@ -271,7 +277,7 @@ export default function HomePage() {
                 }}>
                   <Building2 size={20} />
                 </div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                   Portal para Clientes
                 </h3>
               </div>

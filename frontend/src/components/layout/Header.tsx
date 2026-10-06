@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { alertService } from '@/services/alert.service';
 import { Menu, Shield, LogOut, Bell } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface HeaderProps {
   onOpenSidebar: () => void;
@@ -47,7 +48,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
         height: '64px',
         padding: '0 1.5rem',
         borderBottom: '1px solid var(--border-color)',
-        background: 'rgba(13, 19, 31, 0.85)',
+        background: 'var(--bg-header)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
@@ -83,7 +84,9 @@ export function Header({ onOpenSidebar }: HeaderProps) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <ThemeToggle />
+
         {user && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {/* Alert Center Link */}

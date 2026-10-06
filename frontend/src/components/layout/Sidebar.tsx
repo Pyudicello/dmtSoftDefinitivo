@@ -21,6 +21,7 @@ import {
   Activity,
   AlertTriangle
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -129,7 +130,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           top: 0,
           left: 0,
           zIndex: 50,
-          background: '#0d131f',
+          background: 'var(--bg-sidebar)',
           borderRight: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',
@@ -214,14 +215,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     fontSize: '0.875rem',
                     fontWeight: active ? 600 : 400,
                     background: active ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                    color: active ? '#93c5fd' : 'var(--text-secondary)',
-                    border: active ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent',
+                    color: active ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                    border: active ? '1px solid var(--border-accent)' : '1px solid transparent',
                     transition: 'all 0.15s ease-in-out',
                   }}
                   className="sidebar-link"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <span style={{ color: active ? '#38bdf8' : 'var(--text-muted)' }}>{item.icon}</span>
+                    <span style={{ color: active ? 'var(--accent-blue)' : 'var(--text-muted)' }}>{item.icon}</span>
                     <span>{item.label}</span>
                   </div>
 
@@ -241,7 +242,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         {activeAlertsCount}
                       </span>
                     )}
-                    {active && <ChevronRight size={14} color="#38bdf8" />}
+                    {active && <ChevronRight size={14} color="var(--accent-blue)" />}
                   </div>
                 </Link>
               );
@@ -249,8 +250,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </nav>
         </div>
 
-        {/* User Identity Footer */}
-        <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.2)' }}>
+        {/* User Identity and Theme Toggle Footer */}
+        <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)', background: 'var(--table-th-bg)' }}>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <ThemeToggle showLabel={true} style={{ width: '100%', justifyContent: 'center' }} />
+          </div>
+
           {user && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -264,7 +269,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#93c5fd',
+                    color: 'var(--accent-blue)',
                     fontWeight: 700,
                     fontSize: '0.85rem',
                     flexShrink: 0,

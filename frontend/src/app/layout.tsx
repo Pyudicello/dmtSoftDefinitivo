@@ -4,6 +4,8 @@ import { AuthProvider } from '@/context/AuthContext';
 import { QueryProvider } from '@/context/QueryProvider';
 import { ToastProvider } from '@/context/ToastContext';
 
+import { ThemeProvider } from '@/context/ThemeContext';
+
 export const metadata: Metadata = {
   title: 'DMT-Soft — Plataforma SaaS de Higiene y Seguridad Laboral',
   description: 'Gestión centralizada de vencimientos, empresas y seguridad multi-tenant para consultoras de Higiene y Seguridad.',
@@ -23,11 +25,13 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <QueryProvider>
-          <AuthProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </AuthProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <ToastProvider>
+                {children}
+              </ToastProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </QueryProvider>
       </body>
     </html>
